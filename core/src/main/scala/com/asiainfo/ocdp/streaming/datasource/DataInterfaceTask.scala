@@ -1,15 +1,16 @@
-package com.asiainfo.ocdp.streaming.manager
+package com.asiainfo.ocdp.streaming.datasource
 
 import com.asiainfo.ocdp.streaming.common.StreamingCache
 import com.asiainfo.ocdp.streaming.config.MainFrameConf
-import com.asiainfo.ocdp.streaming.datasource.StreamingInputReader
 import com.asiainfo.ocdp.streaming.event.Event
+import com.asiainfo.ocdp.streaming.manager.StreamTask
 import com.asiainfo.ocdp.streaming.service.DataInterfaceServer
 import com.asiainfo.ocdp.streaming.tools.{CacheFactory, Json4sUtils}
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
+
 import scala.collection.mutable.{ArrayBuffer, Map}
 import scala.collection.{immutable, mutable}
 
@@ -63,7 +64,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 
         enhancedDF.persist
 
-        makeEvents(enhancedDF)
+        makeEvents(enhancedDF, conf.get("uniqKeys"))
 
 //        subscribeEvents(eventMap)
 
@@ -98,10 +99,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
         private[this] var currentPos: Int = -1
         private[this] var arrayBuffer: Array[String] = _
 
-        override def hasNext: Boolean = {
-          val flag = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
-          flag
-        }
+        override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
 
         override def next(): String = {
           currentPos += 1
@@ -206,12 +204,12 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     sqlc.read.json(enhancedJsonRDD)
   }
 
-  final def makeEvents(df: DataFrame) = {
+  final def makeEvents(df: DataFrame, uniqKeys: String) = {
     val eventMap: mutable.Map[String, DataFrame] = mutable.Map[String, DataFrame]()
     println(" Begin exec evets : " + System.currentTimeMillis())
 
     df.persist()
-    events.map(event => event.buildEvent(df))
+    events.map(event => event.buildEvent(df, uniqKeys))
     df.unpersist()
 
   }

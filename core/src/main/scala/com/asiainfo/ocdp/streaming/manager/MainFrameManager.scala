@@ -130,17 +130,7 @@ object MainFrameManager extends Logging {
     jars = jars.dropRight(1)
 
     val appJars = libs_dir + "/" + MainFrameConf.systemProps.get("appJars")
-    var streamClass = " --class "
-    val task_type = conf.getTask_type
-    if (TaskConstant.TYPE_DATAINTERFACE == task_type) {
-      streamClass += MainFrameConf.systemProps.get("interface_class")
-    }
-    else if (TaskConstant.TYPE_SUTJECT == task_type) {
-      streamClass += MainFrameConf.systemProps.get("subject_class")
-    }
-    else {
-      throw new Exception("Task type " + task_type + "is invalid !")
-    }
+    var streamClass = " --class com.asiainfo.ocdp.streaming.manager.StreamApp"
 
     val executor_memory = " --executor-memory " + conf.getExecutor_memory
 

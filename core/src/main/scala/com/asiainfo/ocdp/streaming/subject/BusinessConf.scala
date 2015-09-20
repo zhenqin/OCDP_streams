@@ -1,4 +1,4 @@
-package com.asiainfo.ocdp.streaming.business
+package com.asiainfo.ocdp.streaming.subject
 
 import com.asiainfo.ocdp.streaming.common.JDBCUtil
 import com.asiainfo.ocdp.streaming.config.{DataInterfaceConf, DataSourceConf, BaseConf}

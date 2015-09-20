@@ -13,17 +13,17 @@ import scala.collection.mutable.ArrayBuffer
  * Created by leo on 9/18/15.
  */
 trait StreamWriter {
-  def push(df: DataFrame, conf: EventConf)
+  def push(df: DataFrame, conf: EventConf, uniqKeys: String)
 }
 
 class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
 
-  def push(df: DataFrame, conf: EventConf) {
+  def push(df: DataFrame, conf: EventConf, uniqKeys: String) {
     val jsonRDD = df.toJSON
 
     val topic = diConf.get("topic")
 
-    val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, conf)
+    val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys)
 
     resultRDD.mapPartitions(iter => {
       val line = iter.next()
@@ -44,23 +44,21 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
   /**
    *
    * @param jsonRDD
-   * @param conf
+   * @param uniqKeys
    * @return 返回输出到kafka的(key, message)元组的数组
    */
-  def transforEvent2KafkaMessage(jsonRDD: RDD[String], conf: EventConf): RDD[(String, String)] = {
-    val kafka_key = conf.get("kafkakeycol", "")
-    val delim = conf.get("delim", ",")
+  def transforEvent2KafkaMessage(jsonRDD: RDD[String], uniqKeys: String): RDD[(String, String)] = {
 
     jsonRDD.map(jsonstr => {
       val data = Json4sUtils.jsonStr2Map(jsonstr)
-      val key = data.getOrElse(kafka_key, null)
+      val key = uniqKeys.split(",").map(data(_)).mkString(",")
       (key, jsonstr)
     })
   }
 }
 
 class StreamJDBCWriter(diConf: DataInterfaceConf) extends StreamWriter {
-  def push(df: DataFrame, conf: EventConf) {
+  def push(df: DataFrame, conf: EventConf, uniqKeys: String) {
     val dsConf = diConf.dsConf
     val jdbcUrl = dsConf.get("jdbcurl")
     val tableName = diConf.get("tablename")

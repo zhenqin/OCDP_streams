@@ -2,6 +2,8 @@ package com.asiainfo.ocdp.streaming.manager
 
 import com.asiainfo.ocdp.streaming.config.TaskConf
 import com.asiainfo.ocdp.streaming.constant.TaskConstant
+import com.asiainfo.ocdp.streaming.datasource.DataInterfaceTask
+import com.asiainfo.ocdp.streaming.subject.SubjectTask
 
 /**
  * Created by leo on 9/16/15.

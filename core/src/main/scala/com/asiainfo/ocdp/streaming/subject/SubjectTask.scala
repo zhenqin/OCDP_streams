@@ -1,5 +1,6 @@
-package com.asiainfo.ocdp.streaming.manager
+package com.asiainfo.ocdp.streaming.subject
 
+import com.asiainfo.ocdp.streaming.manager.StreamTask
 import org.apache.spark.streaming.StreamingContext
 
 /**

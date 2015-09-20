@@ -12,15 +12,6 @@ import scala.sys.process._
 class Task extends Actor with Logging {
 
   def receive = {
-    /*case args: Array[String] => {
-      try {
-        //        SparkSubmit.main(args)
-      } catch {
-        // If exceptions occur after the "exit" has happened, fine to ignore them.
-        // These represent code paths not reachable during normal execution.
-        case e: Exception => if (!exitedCleanly) throw e
-      } finally context.stop(self)
-    }*/
     case cmd: (String, String) => {
       try {
         logInfo("Start task id : " + cmd._1)

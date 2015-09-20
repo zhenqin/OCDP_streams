@@ -105,7 +105,7 @@ class DataInterfaceServer extends Logging {
     data.foreach(x => {
       val conf = new EventConf()
       conf.setId(x.get("id").get)
-      conf.setInIFDd(id)
+      conf.setInIFId(id)
       conf.setName(x.get("name").get)
       conf.setEvent_expr(x.get("event_expr").get)
       conf.setP_event_id(x.get("peventid").get)

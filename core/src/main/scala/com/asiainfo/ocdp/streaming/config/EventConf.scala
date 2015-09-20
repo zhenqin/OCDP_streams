@@ -7,7 +7,7 @@ import scala.beans.BeanProperty
  */
 class EventConf(conf: Map[String, String] = null) extends BaseConf(conf) {
   @BeanProperty var id: String = ""
-  @BeanProperty var inIFDd: String = ""
+  @BeanProperty var inIFId: String = ""
   @BeanProperty var outIFIds: Array[DataInterfaceConf] = null
   @BeanProperty var name: String = ""
   @BeanProperty var event_expr: String = ""

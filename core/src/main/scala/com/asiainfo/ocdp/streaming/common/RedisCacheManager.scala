@@ -1,17 +1,12 @@
 package com.asiainfo.ocdp.streaming.common
 
 import java.nio.ByteBuffer
-import java.util.{List => JList}
-import java.util.{ArrayList => JArrayList}
-
-import java.util.{Map => JMap}
-
 import java.util.concurrent.FutureTask
+import java.util.{ArrayList => JArrayList, List => JList, Map => JMap}
 
 import com.asiainfo.ocdp.streaming.config.MainFrameConf
 import com.asiainfo.ocdp.streaming.constant.EventConstant
 import com.asiainfo.ocdp.streaming.tools._
-import org.apache.spark.sql.Row
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.Jedis
 
@@ -405,7 +400,7 @@ abstract class RedisCacheManager extends CacheManager {
 
 
   //保存事件缓存
-  def setEventData(keyEventIdData: Array[(String, String, Row)]) {
+  def setEventData(keyEventIdData: Array[(String, String, String)]) {
     val t1 = System.currentTimeMillis()
     val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
     val taskMap = Map[Int, FutureTask[String]]()

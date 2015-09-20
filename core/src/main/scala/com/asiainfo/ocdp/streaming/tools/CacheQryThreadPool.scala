@@ -1,12 +1,10 @@
 package com.asiainfo.ocdp.streaming.tools
 
-import java.util.concurrent.{ExecutorService, Executors, Callable}
+import java.util.concurrent.Callable
 import java.util.{List => JList, Map => JMap}
 
 import com.asiainfo.ocdp.streaming.common.CodisCacheManager
 import com.asiainfo.ocdp.streaming.config.MainFrameConf
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.slf4j.LoggerFactory
 
 import scala.collection.JavaConverters._
@@ -19,10 +17,10 @@ import scala.collection.mutable.Map
  */
 object CacheQryThreadPool {
   // 初始化线程池
-//  val threadPool: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
+  //  val threadPool: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
   val threadPool = ThreadUtils.newDaemonCachedThreadPool("CacheQryDaemonCachedThreadPool", MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
 
-	val DEFAULT_CHARACTER_SET = "UTF-8"
+  val DEFAULT_CHARACTER_SET = "UTF-8"
 }
 
 class Qry(keys: Seq[Array[Byte]]) extends Callable[JList[Array[Byte]]] {
@@ -30,15 +28,15 @@ class Qry(keys: Seq[Array[Byte]]) extends Callable[JList[Array[Byte]]] {
 
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    var result : JList[Array[Byte]] = null
-    try{
+    var result: JList[Array[Byte]] = null
+    try {
       val pgl = conn.pipelined()
       keys.foreach(x => pgl.get(x))
       result = pgl.syncAndReturnAll().asInstanceOf[JList[Array[Byte]]]
     } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in Qry.call()")
-    } finally{
+        logger.error("= = " * 15 + "found error in Qry.call()")
+    } finally {
       conn.close()
     }
 
@@ -51,7 +49,7 @@ class Insert(value: Map[String, Any]) extends Callable[String] {
 
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    try{
+    try {
       val pgl = conn.pipelined()
       val ite = value.iterator
       val kryotool = new KryoSerializerStreamAppTool
@@ -62,8 +60,8 @@ class Insert(value: Map[String, Any]) extends Callable[String] {
       }
     } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in Insert.call()")
-    } finally{
+        logger.error("= = " * 15 + "found error in Insert.call()")
+    } finally {
       conn.close()
     }
     ""
@@ -75,18 +73,18 @@ class QryHashall(keys: Seq[String]) extends Callable[JList[JMap[String, String]]
 
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    var result : JList[JMap[String, String]] = null
-    try{
+    var result: JList[JMap[String, String]] = null
+    try {
       //    val conn = getConnection
       val pgl = conn.pipelined()
       keys.foreach(x => pgl.hgetAll(x))
       result = pgl.syncAndReturnAll().asInstanceOf[JList[JMap[String, String]]]
       //      conn.close()
       //      result
-    }catch {
+    } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in QryHashall.call()")
-    } finally{
+        logger.error("= = " * 15 + "found error in QryHashall.call()")
+    } finally {
       conn.close()
     }
 
@@ -100,7 +98,7 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
 
-    try{
+    try {
       val pgl = conn.pipelined()
       val ite = value.iterator
       while (ite.hasNext) {
@@ -108,10 +106,10 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
         pgl.hmset(elem._1, elem._2.asJava)
         pgl.sync()
       }
-    }catch {
+    } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in InsertHash.call()")
-    } finally{
+        logger.error("= = " * 15 + "found error in InsertHash.call()")
+    } finally {
       conn.close()
     }
 
@@ -124,13 +122,13 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
  * 保存 Array[(Row_rowKey,(eventId, Row)] => Map[Row_rowKey, Map(eventId, Row)]
  * @param value
  */
-class InsertEventRows(value: Array[(String, String, Row)]) extends Callable[String] {
+class InsertEventRows(value: Array[(String, String, String)]) extends Callable[String] {
   val logger = LoggerFactory.getLogger(this.getClass)
 
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
 
-    try{
+    try {
       val tool = new KryoSerializerStreamAppTool
 
       val pgl = conn.pipelined()
@@ -139,16 +137,15 @@ class InsertEventRows(value: Array[(String, String, Row)]) extends Callable[Stri
         val elem = ite.next() //结构：(Row_rowKey,(eventId, Row))
         val rowKey = elem._1
         val fieldEventId = elem._2
-//        val valueRow = tool.serialize[Row](elem._3)
-//        pgl.hset(rowKey.getBytes(), fieldEventId.getBytes(), tool.serialize[Row](elem._3).array())
-	      pgl.hset(rowKey.getBytes(), fieldEventId.getBytes(), tool.serialize[Row](elem._3).array())
+        val jsonRow = elem._3
+        pgl.hset(rowKey.getBytes, fieldEventId.getBytes, jsonRow.getBytes)
       }
       pgl.syncAndReturnAll()
 
-    }catch {
+    } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in InsertEventRows.call()")
-    } finally{
+        logger.error("= = " * 15 + "found error in InsertEventRows.call()")
+    } finally {
       conn.close()
     }
 
@@ -171,32 +168,32 @@ class QryEventCache(value: Array[(String, Array[String])]) extends Callable[Map[
 
     val resultMap = Map[String, Map[String, Array[Byte]]]()
 
-    try{
+    try {
       val tool = new KryoSerializerStreamAppTool
 
       val pgl = conn.pipelined()
       val ite = value.iterator
       while (ite.hasNext) {
-        var result : JList[Array[Byte]] = null
+        var result: JList[Array[Byte]] = null
         val elem = ite.next() //结构：(Row_rowKey,Array(eventId))
         val rowKey = elem._1
         val fields = elem._2
         pgl.hmget(rowKey.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET), fields.map(_.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET)): _ *)
-	      result = pgl.syncAndReturnAll().head.asInstanceOf[JList[Array[Byte]]]
+        result = pgl.syncAndReturnAll().head.asInstanceOf[JList[Array[Byte]]]
 
-        if(!resultMap.contains(rowKey)){
+        if (!resultMap.contains(rowKey)) {
           resultMap.put(rowKey, Map[String, Array[Byte]]())
         }
-        fields.zip(result).foreach{case (k, v)=>
-	        resultMap.get(rowKey).get.put(k, v)
+        fields.zip(result).foreach { case (k, v) =>
+          resultMap.get(rowKey).get.put(k, v)
         }
       }
 
-    }catch {
+    } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in QryEventCache.call()")
-	      ex.printStackTrace()
-    } finally{
+        logger.error("= = " * 15 + "found error in QryEventCache.call()")
+        ex.printStackTrace()
+    } finally {
       conn.close()
     }
 
@@ -219,30 +216,30 @@ class QryAllEventCache(value: scala.collection.mutable.Set[String]) extends Call
 
     val resultMap = Map[String, Map[String, Array[Byte]]]()
 
-    try{
+    try {
       val tool = new KryoSerializerStreamAppTool
 
       val pgl = conn.pipelined()
       val ite = value.iterator
       while (ite.hasNext) {
-	      var result : JMap[Array[Byte], Array[Byte]] = null
+        var result: JMap[Array[Byte], Array[Byte]] = null
         val rowKey = ite.next() //结构：(Row_rowKey,Array(eventId))
         pgl.hgetAll(rowKey.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET))
         result = pgl.syncAndReturnAll().head.asInstanceOf[JMap[Array[Byte], Array[Byte]]]
 
-        if(!resultMap.contains(rowKey)){
+        if (!resultMap.contains(rowKey)) {
           resultMap.put(rowKey, Map[String, Array[Byte]]())
         }
-	      result.foreach { case (k, v) =>
-		      resultMap.get(rowKey).get.put(new String(k, CacheQryThreadPool.DEFAULT_CHARACTER_SET), v)
-	      }
+        result.foreach { case (k, v) =>
+          resultMap.get(rowKey).get.put(new String(k, CacheQryThreadPool.DEFAULT_CHARACTER_SET), v)
+        }
       }
 
-    }catch {
+    } catch {
       case ex: Exception =>
-        logger.error("= = " * 15 +"found error in QryAllEventCache.call()")
-	      ex.printStackTrace()
-    } finally{
+        logger.error("= = " * 15 + "found error in QryAllEventCache.call()")
+        ex.printStackTrace()
+    } finally {
       conn.close()
     }
 
