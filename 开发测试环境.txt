@@ -1,0 +1,24 @@
+1. 前台开发测试环境	
+MySQL信息
+	地址：10.1.253.155
+	端口：3306
+	用户名：admin
+	密码：11111
+	数据库：fust
+	数据JSON说明：
+		select * from data_source
+		select * from data_interface
+		两个表的properties字段里存储的信息就是数据源管理和数据接口管理的JSON格式
+界面开发服务信息
+    地址：http://10.1.253.155:58088/ocdc/index.jsp
+    用户名：admin
+    密码：admin
+    	
+2. 后台开发测试环境
+集群地址：10.1.251.152，10.1.251.153，10.1.253.251，10.1.253.252，10.1.253.253
+    用户名：spark
+    密码：asiainfo
+mysql地址：10.1.251.152
+    用户名：spark
+    密码：spark
+

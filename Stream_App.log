@@ -1,0 +1,120 @@
+Driver successfully submitted as driver-20150831192534-0037
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831192534-0037 is RUNNING
+Driver running on 10.1.49.53:34598 (worker-20150829155044-10.1.49.53-34598)
+Driver successfully submitted as driver-20150831192728-0038
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831192728-0038 is RUNNING
+Driver running on 10.1.49.53:34598 (worker-20150829155044-10.1.49.53-34598)
+Driver successfully submitted as driver-20150831193146-0000
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831193146-0000 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831193920-0001
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831193920-0001 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831200043-0002
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831200043-0002 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831202551-0003
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831202551-0003 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831202651-0004
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831202651-0004 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831202750-0005
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831202750-0005 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831202852-0006
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831202852-0006 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831202952-0007
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831202952-0007 is RUNNING
+Driver running on 10.1.49.53:49646 (worker-20150831193037-10.1.49.53-49646)
+Driver successfully submitted as driver-20150831210011-0007
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831210011-0007 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150831210110-0008
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831210110-0008 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150831210211-0009
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831210211-0009 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150831210953-0010
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150831210953-0010 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901114908-0011
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901114908-0011 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901115337-0012
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901115337-0012 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901115927-0013
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901115927-0013 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901134915-0014
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901134915-0014 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901135454-0015
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901135454-0015 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901141642-0016
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901141642-0016 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901142441-0017
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901142441-0017 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901143104-0018
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901143104-0018 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901144243-0019
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901144243-0019 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
+Driver successfully submitted as driver-20150901145030-0020
+... waiting before polling master for driver state
+... polling master for driver state
+State of driver-20150901145030-0020 is RUNNING
+Driver running on 10.1.49.53:60491 (worker-20150831204536-10.1.49.53-60491)
