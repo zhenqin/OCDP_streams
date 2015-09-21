@@ -2,7 +2,7 @@ package com.asiainfo.ocdp.stream.service
 
 import com.asiainfo.ocdp.stream.common.{JDBCUtil, Logging}
 import com.asiainfo.ocdp.stream.config._
-import com.asiainfo.ocdp.stream.constant.TableInfoConstant
+import com.asiainfo.ocdp.stream.constant.{DataSourceConstant, TableInfoConstant}
 import com.asiainfo.ocdp.stream.event.Event
 import com.asiainfo.ocdp.stream.label.Label
 import com.asiainfo.ocdp.stream.tools.Json4sUtils
@@ -135,4 +135,51 @@ class DataInterfaceServer extends Logging {
     }).toArray
   }
 
+  def getSubjectInfoById(id: String): SubjectConf = {
+    val conf = new SubjectConf()
+
+    val sql = "select name, properties " +
+      "from " + TableInfoConstant.BusinessEventTableName +
+      " where id='" + id + "' and status = 1"
+
+    val subject = JDBCUtil.query(sql).head
+    conf.setId(id)
+    conf.setName(subject.get("name").get)
+
+    val propsJsonStr = subject.get("properties").getOrElse(null)
+    var propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "events")
+
+    val events = Map[String, String]()
+    propsMap.foreach(kvMap => {
+      if (!kvMap.isEmpty) {
+        events += (kvMap.get("eventId").get -> kvMap.get("select_expr").get)
+      }
+    })
+    conf.setEvents(events.toMap)
+
+    propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "props")
+    propsMap.foreach(kvMap => {
+      if (!kvMap.isEmpty) conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get)
+    })
+
+    conf
+  }
+
+  def getDataInterfaceByEventId(id: String): DataInterfaceConf = {
+    val sql = "select properties " +
+      "from " + TableInfoConstant.EventTableName +
+      " where id = '" + id + "' and status = 1"
+    val data = JDBCUtil.query(sql)
+
+    val propsJsonStr = data.head.get("properties").getOrElse(null)
+    val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
+    var ifconf: DataInterfaceConf = null
+    outputIFIdsArrMap.foreach(kvMap => {
+      val ifid = kvMap.get("pvalue").get
+      val conf = (getDataInterfaceInfoById(ifid))
+      if (DataSourceConstant.KAFKA_TYPE.equals(conf.getDiType))
+        ifconf = conf
+    })
+    ifconf
+  }
 }

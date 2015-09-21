@@ -1,4 +1,4 @@
-package com.asiainfo.ocdp.stream.datasource
+package com.asiainfo.ocdp.stream.subject
 
 import com.asiainfo.ocdp.stream.common.Logging
 import com.asiainfo.ocdp.stream.config.DataInterfaceConf
@@ -8,7 +8,7 @@ import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 import org.apache.spark.streaming.kafka.KafkaUtils
 
-object StreamingInputReader extends Logging {
+object EventReader extends Logging {
 
   def readSource(ssc: StreamingContext, conf: DataInterfaceConf): DStream[String] = {
     val dsConf = conf.getDsConf

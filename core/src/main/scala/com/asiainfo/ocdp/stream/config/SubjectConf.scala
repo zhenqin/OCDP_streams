@@ -8,6 +8,6 @@ import scala.beans.BeanProperty
 class SubjectConf(conf: Map[String, String] = null) extends BaseConf(conf) {
   @BeanProperty var id: String = ""
   @BeanProperty var name: String = ""
-  @BeanProperty var events: Array[EventConf] = null
+  @BeanProperty var events: Map[String, String] = null
   @BeanProperty var status: Int = 0
 }

@@ -1,17 +1,36 @@
 package com.asiainfo.ocdp.stream.subject
 
+import com.asiainfo.ocdp.stream.datasource.StreamingInputReader
 import com.asiainfo.ocdp.stream.manager.StreamTask
+import com.asiainfo.ocdp.stream.service.{DataInterfaceServer, SubjectServer}
 import org.apache.spark.sql.{DataFrame, SQLContext}
 import org.apache.spark.streaming.StreamingContext
+import org.apache.spark.streaming.dstream.DStream
 
 /**
  * Created by leo on 9/16/15.
  */
 class SubjectTask(id: String, interval: Int) extends StreamTask {
 
+  val server = new DataInterfaceServer()
+  val conf = server.getSubjectInfoById(id)
+  val events: Map[String, String] = conf.getEvents
+
   final def process(ssc: StreamingContext) = {
     this.ssc = ssc
     sqlc = new SQLContext(ssc.sparkContext)
+
+    if (events.size == 1) {
+      val eventId = events.head._1
+      val diConf = server.getDataInterfaceByEventId(eventId)
+      StreamingInputReader.readSource(ssc, diConf)
+
+
+    } else if (events.size > 1) {
+
+    } else {
+      throw new Exception("The subject has not subscribe any event !")
+    }
 
     //1 根据输入数据接口配置，生成数据流 DStream
     val inputStream = readSource(ssc)
