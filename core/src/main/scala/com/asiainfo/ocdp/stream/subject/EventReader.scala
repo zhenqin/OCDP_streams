@@ -21,7 +21,7 @@ object EventReader extends Logging {
         val kafkaParams = Map[String, String](DataSourceConstant.BROKER_LIST_KEY -> dsConf.get(DataSourceConstant.BROKER_LIST_KEY))
         logInfo("Init Direct Kafka Stream : brokers->" + dsConf.get(DataSourceConstant.BROKER_LIST_KEY) + "; topic->" + topicsSet + " ! ")
         KafkaUtils.createDirectStream[String, String, StringDecoder, StringDecoder](
-          ssc, kafkaParams, topicsSet).map(_._2)
+          ssc, kafkaParams, topicsSet).map(_._1)
 
       } else {
         val zkConnect = dsConf.get(DataSourceConstant.ZK_CONNECT_KEY)
@@ -30,7 +30,7 @@ object EventReader extends Logging {
 
         val topicMap = Map(conf.get(DataSourceConstant.TOPIC_KEY) -> numConsumerFetchers)
         logInfo("Init Kafka Stream : zookeeper.connect->" + zkConnect + "; group.id->" + groupId + "; topic->" + topicMap + " ! ")
-        KafkaUtils.createStream(ssc, zkConnect, groupId, topicMap).map(_._2)
+        KafkaUtils.createStream(ssc, zkConnect, groupId, topicMap).map(_._1)
       }
 
     } else if ("hdfs".equals(sourceType)) {

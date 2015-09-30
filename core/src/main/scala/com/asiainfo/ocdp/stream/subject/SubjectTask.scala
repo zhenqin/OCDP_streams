@@ -1,11 +1,8 @@
 package com.asiainfo.ocdp.stream.subject
 
-import com.asiainfo.ocdp.stream.datasource.StreamingInputReader
 import com.asiainfo.ocdp.stream.manager.StreamTask
-import com.asiainfo.ocdp.stream.service.{DataInterfaceServer, SubjectServer}
-import org.apache.spark.sql.{DataFrame, SQLContext}
+import com.asiainfo.ocdp.stream.service.DataInterfaceServer
 import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.DStream
 
 /**
  * Created by leo on 9/16/15.
@@ -16,7 +13,7 @@ class SubjectTask(id: String, interval: Int) extends StreamTask {
   val conf = server.getSubjectInfoById(id)
   val events: Map[String, String] = conf.getEvents
 
-  final def process(ssc: StreamingContext) = {
+  final def process(ssc: StreamingContext) = {/*
     this.ssc = ssc
     sqlc = new SQLContext(ssc.sparkContext)
 
@@ -24,7 +21,6 @@ class SubjectTask(id: String, interval: Int) extends StreamTask {
       val eventId = events.head._1
       val diConf = server.getDataInterfaceByEventId(eventId)
       StreamingInputReader.readSource(ssc, diConf)
-
 
     } else if (events.size > 1) {
 
@@ -67,7 +63,7 @@ class SubjectTask(id: String, interval: Int) extends StreamTask {
         enhancedDF.unpersist()
 
       }
-    })
+    })*/
   }
 
 }

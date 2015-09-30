@@ -2,11 +2,9 @@ package com.asiainfo.ocdp.stream.tools
 
 import java.util.concurrent.Callable
 import java.util.{List => JList, Map => JMap}
-
-import com.asiainfo.ocdp.streaming.common.CodisCacheManager
-import com.asiainfo.ocdp.streaming.config.MainFrameConf
+import com.asiainfo.ocdp.stream.common.CodisCacheManager
+import com.asiainfo.ocdp.stream.config.MainFrameConf
 import org.slf4j.LoggerFactory
-
 import scala.collection.JavaConverters._
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
@@ -129,12 +127,10 @@ class InsertEventRows(value: Array[(String, String, String)]) extends Callable[S
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
 
     try {
-      val tool = new KryoSerializerStreamAppTool
-
       val pgl = conn.pipelined()
       val ite = value.iterator
       while (ite.hasNext) {
-        val elem = ite.next() //结构：(Row_rowKey,(eventId, Row))
+        val elem = ite.next()
         val rowKey = elem._1
         val fieldEventId = elem._2
         val jsonRow = elem._3
@@ -160,17 +156,15 @@ class InsertEventRows(value: Array[(String, String, String)]) extends Callable[S
  * @param value `Map[Row_rowKey, Map[(eventId/businessEventId, Row/time)]]`
  *
  */
-class QryEventCache(value: Array[(String, Array[String])]) extends Callable[Map[String, Map[String, Array[Byte]]]] {
+class QryEventCache(value: Array[(String, Array[String])]) extends Callable[Map[String, Map[String, String]]] {
   val logger = LoggerFactory.getLogger(this.getClass)
 
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
 
-    val resultMap = Map[String, Map[String, Array[Byte]]]()
+    val resultMap = Map[String, Map[String, String]]()
 
     try {
-      val tool = new KryoSerializerStreamAppTool
-
       val pgl = conn.pipelined()
       val ite = value.iterator
       while (ite.hasNext) {
@@ -182,10 +176,10 @@ class QryEventCache(value: Array[(String, Array[String])]) extends Callable[Map[
         result = pgl.syncAndReturnAll().head.asInstanceOf[JList[Array[Byte]]]
 
         if (!resultMap.contains(rowKey)) {
-          resultMap.put(rowKey, Map[String, Array[Byte]]())
+          resultMap.put(rowKey, Map[String, String]())
         }
         fields.zip(result).foreach { case (k, v) =>
-          resultMap.get(rowKey).get.put(k, v)
+          resultMap.get(rowKey).get.put(k, new String(v))
         }
       }
 

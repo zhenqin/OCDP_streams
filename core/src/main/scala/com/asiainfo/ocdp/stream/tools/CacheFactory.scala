@@ -1,7 +1,7 @@
 package com.asiainfo.ocdp.stream.tools
 
-import com.asiainfo.ocdp.streaming.common.{JodisCacheManager, CodisCacheManager, CacheManager}
-import com.asiainfo.ocdp.streaming.config.MainFrameConf
+import com.asiainfo.ocdp.stream.common.{CacheManager, CodisCacheManager, JodisCacheManager}
+import com.asiainfo.ocdp.stream.config.MainFrameConf
 
 /**
  * Created by tsingfu on 15/8/18.

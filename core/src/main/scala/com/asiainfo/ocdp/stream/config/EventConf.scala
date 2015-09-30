@@ -10,8 +10,10 @@ class EventConf(conf: Map[String, String] = null) extends BaseConf(conf) {
   @BeanProperty var inIFId: String = ""
   @BeanProperty var outIFIds: Array[DataInterfaceConf] = null
   @BeanProperty var name: String = ""
-  @BeanProperty var event_expr: String = ""
+  @BeanProperty var filte_expr: String = ""
+  @BeanProperty var select_expr: String = ""
   @BeanProperty var p_event_id: String = ""
+  @BeanProperty var interval: Int = 0
 
 }
 

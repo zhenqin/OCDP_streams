@@ -107,8 +107,10 @@ class DataInterfaceServer extends Logging {
       conf.setId(x.get("id").get)
       conf.setInIFId(id)
       conf.setName(x.get("name").get)
-      conf.setEvent_expr(x.get("event_expr").get)
+      conf.setSelect_expr(x.get("select_expr").get)
+      conf.setFilte_expr(x.get("filte_expr").get)
       conf.setP_event_id(x.get("peventid").get)
+      conf.setInterval(x.get("send_interval").get.toInt)
 
       val propsJsonStr = x.get("properties").getOrElse(null)
 
@@ -165,21 +167,25 @@ class DataInterfaceServer extends Logging {
     conf
   }
 
-  def getDataInterfaceByEventId(id: String): DataInterfaceConf = {
+  def getDataInterfaceByEventId(ids: Array[String]): Array[DataInterfaceConf] = {
+
     val sql = "select properties " +
       "from " + TableInfoConstant.EventTableName +
-      " where id = '" + id + "' and status = 1"
+      " where id in (" + ids.map("'" + _ + "'").mkString(",") + ") and status = 1"
     val data = JDBCUtil.query(sql)
 
-    val propsJsonStr = data.head.get("properties").getOrElse(null)
-    val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
-    var ifconf: DataInterfaceConf = null
-    outputIFIdsArrMap.foreach(kvMap => {
-      val ifid = kvMap.get("pvalue").get
-      val conf = (getDataInterfaceInfoById(ifid))
-      if (DataSourceConstant.KAFKA_TYPE.equals(conf.getDiType))
-        ifconf = conf
+    val dfarr = new ArrayBuffer[DataInterfaceConf]()
+    data.map(x => {
+      val propsJsonStr = x.get("properties").getOrElse(null)
+      val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
+      outputIFIdsArrMap.foreach(kvMap => {
+        val ifid = kvMap.get("pvalue").get
+        val conf = getDataInterfaceInfoById(ifid)
+        if (DataSourceConstant.KAFKA_TYPE.equals(conf.getDiType))
+          dfarr.append(conf)
+      })
     })
-    ifconf
+
+    dfarr.toArray
   }
 }

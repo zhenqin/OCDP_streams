@@ -203,9 +203,9 @@ object MainFrameConf {
 
       erconf.set("erid", erid)
       erconf.set("name", x.get("name").get)
-      erconf.set("filter_expr", x.get("EVENT_EXPR").get)
+      erconf.set("filter_expr", x.get("filter_expr").get)
+      erconf.set("select_expr", x.get("select_expr").get)
 
-      // x.get("peventid") = null not None
       val peventid = x.get("peventid").get match {
         case null => "-1"
         case "" => "-1"
@@ -213,13 +213,6 @@ object MainFrameConf {
       }
       erconf.set("peventid", peventid)
       erconf.set("diid", diid)
-
-//      val eventCache_keyName = x.get("eventCache_keyName").get
-//      erconf.set("eventCache_keyName", eventCache_keyName)
-//      eventId2CacheKeyNameMap.put(erid, eventCache_keyName)
-//      val eventCache_keyPrefix = x.get("eventCache_keyPrefix").get
-//      erconf.set("eventCache_keyName", eventCache_keyPrefix)
-//      eventId2CacheKeyPrefixMap.put(erid, eventCache_keyPrefix)
 
       eventId2DIidMap.put(erid, diid)
 
