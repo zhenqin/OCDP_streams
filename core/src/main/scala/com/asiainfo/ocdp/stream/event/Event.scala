@@ -129,11 +129,18 @@ class Event extends Serializable {
             currentPos = 0
             val eventTimes = eventServer.getEventCache(batchArrayBuffer.toArray)
 
+            val updateArrayBuffer = new ArrayBuffer[(String, String, String)]()
             val current_time = System.currentTimeMillis()
             val outputKeys = eventTimes.filter(event => {
+              val time_field = event._2.head._1
               val old_time = event._2.head._2
-              old_time == null || current_time >= (old_time.toLong + conf.getInterval * 1000)
+              if (old_time == null || current_time >= (old_time.toLong + conf.getInterval * 1000)) {
+                updateArrayBuffer.append((event._1, time_field, String.valueOf(current_time)))
+                true
+              } else false
             }).keySet
+
+            eventServer.cacheEventData(updateArrayBuffer.toArray)
 
             resultBuffer.dropWhile(x => !outputKeys.contains(x._1))
 

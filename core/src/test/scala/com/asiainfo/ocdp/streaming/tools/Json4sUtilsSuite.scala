@@ -1,5 +1,7 @@
+/*
 package com.asiainfo.ocdp.streaming.tools
 
+import com.asiainfo.ocdp.stream.tools.Json4sUtils
 import org.scalatest.{BeforeAndAfter, FunSuite}
 
 
@@ -30,3 +32,4 @@ class Json4sUtilsSuite extends FunSuite with BeforeAndAfter {
 
 
 }
+*/

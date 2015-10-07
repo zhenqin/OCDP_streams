@@ -47,11 +47,11 @@ object MainFrameConf {
 
   def initMainFrameConf(): Unit = {
     initSystemProps()
-    initDataSourceConf()
+    /*initDataSourceConf()
     initDataInterfaceConf()
     initLabelRuleConf()
     initEventRuleConf()
-    initBusinessEventConf()
+    initBusinessEventConf()*/
     println("= = " * 20 +" finish initMainFrameConf")
   }
 
@@ -98,7 +98,7 @@ object MainFrameConf {
    * init dataInterface config
    */
   def initDataInterfaceConf() {
-    val sql = "select id, name, dsid, type, status, delim, properties, status " +
+    /*val sql = "select id, name, dsid, type, status, properties, status " +
             "from " + TableInfoConstant.DataInterfaceTableName +
             " where status = 1"
     val dsdata = JDBCUtil.query(sql)
@@ -143,7 +143,7 @@ object MainFrameConf {
 
       diid2DataInterfaceConfMap.put(dataInterfaceConf.get("diid"), dataInterfaceConf)
 
-    })
+    })*/
   }
 
 

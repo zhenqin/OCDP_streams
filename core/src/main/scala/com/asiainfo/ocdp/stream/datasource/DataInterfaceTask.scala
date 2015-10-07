@@ -10,8 +10,8 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
-import scala.collection.mutable.{ArrayBuffer, Map}
-import scala.collection.{immutable, mutable}
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.{mutable, immutable}
 
 /**
  * Created by leo on 9/16/15.
@@ -67,7 +67,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 
         makeEvents(enhancedDF, conf.get("uniqKeys"))
 
-//        subscribeEvents(eventMap)
+        //        subscribeEvents(eventMap)
 
         enhancedDF.unpersist()
 
@@ -143,7 +143,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
           val f1 = System.currentTimeMillis()
           var cachemap_old: Map[String, Any] = null
           try {
-            cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList)
+            cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList).toMap
           } catch {
             case ex: Exception =>
               logError("= = " * 15 + " got exception in EventSource while get cache")
@@ -163,7 +163,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
             val uk = conf.get("uniqKeys").split(",").map(x(_)).mkString(",")
 
             val key = "Label:" + uk
-            val value = x
+            var value = x
 
             var rule_caches = cachemap_old.get(key).get match {
               case cache: immutable.Map[String, StreamingCache] => cache
@@ -180,9 +180,10 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
               var old_cache: StreamingCache = null
               if (cacheOpt != None) old_cache = cacheOpt.get
 
-              val newcache = label.attachLabel(value, old_cache, labelQryData)
+              val resultTuple = label.attachLabel(value, old_cache, labelQryData)
+              value = resultTuple._1
+              val newcache = resultTuple._2
               rule_caches = rule_caches.updated(label.conf.getId, newcache)
-
             })
             currentArrayBuffer.append(Json4sUtils.map2JsonStr(value))
 

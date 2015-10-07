@@ -5,7 +5,6 @@ import org.json4s.DefaultFormats
 import org.json4s.JsonAST.{JString, JValue}
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
-import scala.collection.mutable.Map
 import scala.collection.mutable.ArrayBuffer
 
 /**

@@ -17,7 +17,7 @@ class DataInterfaceServer extends Logging {
 
     val conf = new DataInterfaceConf()
 
-    val sql = "select id, name, dsid, type, status, delim, properties " +
+    val sql = "select id, name, dsid, type, status, properties " +
       "from " + TableInfoConstant.DataInterfaceTableName +
       " where id='" + id + "' and status = 1"
 

@@ -11,7 +11,7 @@
 
     <modules>
         <module>core</module>
-        <module>ShanDongFeature</module>
+        <!-- <module>ShanDongFeature</module> -->
     </modules>
 
     <properties>
@@ -117,13 +117,6 @@
             <artifactId>json4s-jackson_2.10</artifactId>
             <version>3.2.10</version>
         </dependency>
-
-
-        <!--<dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor_2.10</artifactId>
-            <version>2.3.6</version>
-        </dependency>-->
     </dependencies>
 
     <build>
@@ -189,6 +182,27 @@
                     </execution>
                 </executions>
             </plugin>
+
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>dist</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 

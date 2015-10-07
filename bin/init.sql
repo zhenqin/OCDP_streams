@@ -25,4 +25,5 @@ INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"
 
 
 -- 2 STREAM_DATASOURCETYPE
-INSERT INTO STREAM_DATASOURCETYPE(id,name,propname) VALUES(uuid(),"kafka","zookeeper.connect,metadata.broker.list,serializer.class")
+INSERT INTO STREAM_DATASOURCETYPE(id,name,propname) VALUES(uuid(),"kafka","zookeeper.connect,metadata.broker.list,serializer.class");
+INSERT INTO STREAM_DATASOURCETYPE(id,name,propname) VALUES(uuid(),"jdbc","jdbcurl,user,password");

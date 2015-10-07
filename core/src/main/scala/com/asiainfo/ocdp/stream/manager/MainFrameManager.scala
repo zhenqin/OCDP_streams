@@ -130,7 +130,7 @@ object MainFrameManager extends Logging {
     jars = jars.dropRight(1)
 
     val appJars = libs_dir + "/" + MainFrameConf.systemProps.get("appJars")
-    var streamClass = " --class com.asiainfo.ocdp.stream.manager.StreamApp"
+    val streamClass = " --class com.asiainfo.ocdp.stream.manager.StreamApp"
 
     val executor_memory = " --executor-memory " + conf.getExecutor_memory
 

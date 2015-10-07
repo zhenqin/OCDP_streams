@@ -2,6 +2,7 @@ package com.asiainfo.ocdp.streaming.tools
 
 import java.util.Properties
 
+import com.asiainfo.ocdp.stream.tools.Json4sUtils
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.sql.{SaveMode, SQLContext, Row}
