@@ -28,6 +28,12 @@ object StreamApp extends Logging {
 
     //1 初始化 streamingContext
     val sparkConf = new SparkConf().setAppName(taskConf.getName)
+
+
+    sparkConf.setMaster("local[1]")
+    sparkConf.setAppName("local")
+
+
     val sc = new SparkContext(sparkConf)
     val listener = new AppStatusUpdateListener(taskConf.getId)
     sc.addSparkListener(listener)
@@ -37,22 +43,29 @@ object StreamApp extends Logging {
     //    ssc.addStreamingListener(new ReceiveRecordNumListener())
     new TaskStopManager(ssc, taskConf.getId)
 
-    StreamTaskFactory.getStreamTask(taskConf).process(ssc)
+    try {
+      StreamTaskFactory.getStreamTask(taskConf).process(ssc)
+      ssc.start()
+      //4 update task status in db
+      if (StreamingContextState.ACTIVE == ssc.getState()) {
+        taskServer.startTask(taskConf.getId)
+        logInfo("Start task " + taskConf.getId + " sucess !")
+      }
 
-    ssc.start()
+      ssc.awaitTermination()
 
-    //4 update task status in db
-    if (StreamingContextState.ACTIVE == ssc.getState()) {
-      taskServer.startTask(taskConf.getId)
-      logInfo("Start task " + taskConf.getId + " sucess !")
+    } catch {
+      case e: Exception => {
+        e.printStackTrace()
+      }
+    } finally {
+      ssc.stop()
+      taskServer.stopTask(taskConf.getId)
+      logInfo("Stop task " + taskConf.getId + " sucess !")
+      sys.exit()
     }
 
-    ssc.awaitTermination()
 
-    taskServer.stopTask(taskConf.getId)
-    logInfo("Stop task " + taskConf.getId + " sucess !")
-
-    sys.exit()
   }
 
 }

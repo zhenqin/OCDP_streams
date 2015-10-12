@@ -11,7 +11,7 @@ import scala.collection.mutable._
 /**
  * Created by leo on 9/16/15.
  */
-class DataInterfaceServer extends Logging {
+class DataInterfaceServer extends Logging with Serializable {
 
   def getDataInterfaceInfoById(id: String): DataInterfaceConf = {
 
@@ -31,7 +31,7 @@ class DataInterfaceServer extends Logging {
 
     val propsJsonStr = interface.get("properties").getOrElse(null)
     conf.setBaseSchema(Json4sUtils.jsonStr2StructType(propsJsonStr, "fields"))
-    conf.setUDFSchema(Json4sUtils.jsonStr2StructType(propsJsonStr, "UDFfields"))
+    conf.setUDFSchema(Json4sUtils.jsonStr2StructType(propsJsonStr, "userFields"))
 
     val propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "props")
     propsMap.foreach(kvMap => {
@@ -46,7 +46,7 @@ class DataInterfaceServer extends Logging {
 
     val datasource = JDBCUtil.query(sql).head
 
-    conf.setDsid(datasource.get("dsid").get)
+    conf.setDsid(id)
     conf.setName(datasource.get("name").get)
     conf.setDsType(datasource.get("type").get)
 
@@ -59,7 +59,7 @@ class DataInterfaceServer extends Logging {
   }
 
   def getLabelsByIFId(id: String): Array[Label] = {
-    val sql = "select id, plabelid, name, class_name, properties " +
+    val sql = "select id, p_label_id, name, class_name, properties " +
       "from " + TableInfoConstant.LabelTableName +
       " where diid = '" + id + "' and status = 1"
     val dsdata = JDBCUtil.query(sql)
@@ -96,9 +96,9 @@ class DataInterfaceServer extends Logging {
   }
 
   def getEventsByIFId(id: String): Array[Event] = {
-    val sql = "select id, name, event_expr, peventid, properties " +
+    val sql = "select id, name, filter_expr, p_event_id, properties " +
       "from " + TableInfoConstant.EventTableName +
-      " where diid = '" + id + "' status = 1"
+      " where diid = '" + id + "' and status = 1"
     val data = JDBCUtil.query(sql)
 
     val eventarr = ArrayBuffer[Event]()
@@ -107,12 +107,13 @@ class DataInterfaceServer extends Logging {
       conf.setId(x.get("id").get)
       conf.setInIFId(id)
       conf.setName(x.get("name").get)
-      conf.setSelect_expr(x.get("select_expr").get)
-      conf.setFilte_expr(x.get("filte_expr").get)
-      conf.setP_event_id(x.get("peventid").get)
-      conf.setInterval(x.get("send_interval").get.toInt)
+//      conf.setSelect_expr(x.get("select_expr").get)
+      conf.setFilte_expr(x.get("filter_expr").get)
+      conf.setP_event_id(x.get("p_event_id").get)
+//      conf.setInterval(x.get("send_interval").get.toInt)
 
-      val propsJsonStr = x.get("properties").getOrElse(null)
+//      val propsJsonStr = x.get("properties").getOrElse(null)
+val propsJsonStr = """{"event":[{"select_expr":"eventID,time,ci,relstatus","select_names":"[\"eventID\",\"time\",\"ci\",\"relstatus\"]"}],"delim":"[]","interval":"[{0}]","props":[],"output_dis":{"pname":"diid","pvalue":"ff80808150375ae10150377e86ab0005"}}"""
 
       // 业务对应的输出数据接口配置，每个业务一个输出事件接口
       val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")

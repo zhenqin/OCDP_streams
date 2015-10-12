@@ -26,7 +26,11 @@ object Json4sUtils {
   def jsonStr2StructType(jsonStr: String, arrMapFieldName: String): StructType = {
     val fieldsNameTypeArrMap = jsonStr2ArrMap(jsonStr, arrMapFieldName)
     val fieldsInfo = fieldsNameTypeArrMap.map(fieldsNameTypeMap => {
-      (fieldsNameTypeMap("pname"), fieldsNameTypeMap("ptype"), "true")
+      //      (fieldsNameTypeMap("pname"), fieldsNameTypeMap("ptype"), "true")
+      var field_expr = ""
+      if (fieldsNameTypeMap.contains("pvalue")) field_expr = fieldsNameTypeMap("pvalue") + " as " + fieldsNameTypeMap("pname")
+      else field_expr = fieldsNameTypeMap("pname")
+      (field_expr, "String", "true")
     })
     generateStructType(fieldsInfo)
   }
@@ -65,9 +69,6 @@ object Json4sUtils {
       StructField(name, getPrimaryDataType(dataTypeStr), containsNullStr.toBoolean)
     }).toBuffer[StructField]
 
-    val mapField = StructField("labels", MapType(StringType, MapType(StringType, StringType, true), true))
-
-    structFields.append(mapField)
     val schema = StructType(structFields.toArray)
     schema
   }
@@ -105,7 +106,8 @@ object Json4sUtils {
       case "Boolean" => BooleanType
       case "java.sql.Timestamp" => TimestampType
       case "java.sql.Date" => DateType
-      case _ => throw new Exception("Unsupported data type " + typeNameInScala)
+      //      case _ => throw new Exception("Unsupported data type " + typeNameInScala)
+      case _ => StringType
     }
   }
 

@@ -18,8 +18,8 @@ import scala.collection.{mutable, immutable}
  */
 class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 
-  var ssc: StreamingContext = null
-  var sqlc: SQLContext = null
+  /*var ssc: StreamingContext = null
+  var sqlc: SQLContext = null*/
 
   val dataInterfaceService = new DataInterfaceServer
 
@@ -30,10 +30,18 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 
   val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
 
+  protected def transform(source: String, schema: StructType): Option[Row] = {
+    val delim = conf.get("delim", ",")
+    val inputArr = (source + delim + "DummySplitHolder").split(delim).dropRight(1).toSeq
+    /*if (inputArr.length == conf.getInt("field.numbers")) {
+      Some(Row.fromSeq(inputArr))
+    } else None*/
+    Some(Row.fromSeq(inputArr))
+  }
 
   final def process(ssc: StreamingContext) = {
-    this.ssc = ssc
-    sqlc = new SQLContext(ssc.sparkContext)
+//    this.ssc = ssc
+    val sqlc = new SQLContext(ssc.sparkContext)
 
     events.map(_.sqlc = sqlc)
 
@@ -79,16 +87,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     StreamingInputReader.readSource(ssc, conf)
   }
 
-  protected def transform(source: String, schema: StructType): Option[Row] = {
-    val delim = conf.get("delim", ",")
-    val inputArr = (source + delim + "DummySplitHolder").split(delim).dropRight(1).toSeq
-    if (inputArr.length == conf.getInt("field.numbers")) {
-      Some(Row.fromSeq(inputArr))
-    } else None
-  }
-
   def execLabels(df: DataFrame): DataFrame = {
-
     println(" Begin exec labes : " + System.currentTimeMillis())
 
     val jsonRDD = df.toJSON
@@ -119,6 +118,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
           val labelQryKeysSet = mutable.Set[String]()
 
           while (iter.hasNext && (totalFetch < batchLimit)) {
+//            println(iter.next())
             val currentLine = Json4sUtils.jsonStr2Map(iter.next())
             totaldata += currentLine
 
@@ -203,7 +203,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
       }
     })
 
-    sqlc.read.json(enhancedJsonRDD)
+    df.sqlContext.read.json(enhancedJsonRDD)
   }
 
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
@@ -211,7 +211,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     println(" Begin exec evets : " + System.currentTimeMillis())
 
     df.persist()
-    events.map(event => event.buildEvent(df, uniqKeys))
+//    events.map(event => event.buildEvent(df, uniqKeys))
     df.unpersist()
 
   }

@@ -34,6 +34,7 @@ class TaskStopManager(ssc: StreamingContext, taskId: String) extends Logging {
   def checkTaskStop(ssc: StreamingContext, id: String) {
     if (TaskConstant.PRE_STOP == taskServer.checkTaskStatus(id)) {
       ssc.stop()
+//      ssc.sparkContext.stop()
     }
   }
 
