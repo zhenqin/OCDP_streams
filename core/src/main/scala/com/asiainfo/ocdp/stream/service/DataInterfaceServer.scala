@@ -96,6 +96,9 @@ class DataInterfaceServer extends Logging with Serializable {
   }
 
   def getEventsByIFId(id: String): Array[Event] = {
+    /*val sql = "select id, name, select_expr, filter_expr, p_event_id, properties " +
+      "from " + TableInfoConstant.EventTableName +
+      " where diid = '" + id + "' and status = 1"*/
     val sql = "select id, name, filter_expr, p_event_id, properties " +
       "from " + TableInfoConstant.EventTableName +
       " where diid = '" + id + "' and status = 1"
@@ -108,21 +111,26 @@ class DataInterfaceServer extends Logging with Serializable {
       conf.setInIFId(id)
       conf.setName(x.get("name").get)
 //      conf.setSelect_expr(x.get("select_expr").get)
+      conf.setSelect_expr("eventID,time,ci,relstatus")
       conf.setFilte_expr(x.get("filter_expr").get)
       conf.setP_event_id(x.get("p_event_id").get)
-//      conf.setInterval(x.get("send_interval").get.toInt)
 
-//      val propsJsonStr = x.get("properties").getOrElse(null)
-val propsJsonStr = """{"event":[{"select_expr":"eventID,time,ci,relstatus","select_names":"[\"eventID\",\"time\",\"ci\",\"relstatus\"]"}],"delim":"[]","interval":"[{0}]","props":[],"output_dis":{"pname":"diid","pvalue":"ff80808150375ae10150377e86ab0005"}}"""
+      //      val propsJsonStr = x.get("properties").getOrElse(null)
+      val propsJsonStr = """{"output_dis":[{"diid":"ff80808150375ae10150377e86ab0005","delim":"","interval":"0"}],"props":[]}"""
 
       // 业务对应的输出数据接口配置，每个业务一个输出事件接口
       val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
       val outputIFIdArr = ArrayBuffer[DataInterfaceConf]()
+
+      //TODO send_interval should bound on dataInterface, now just one di , so set the last value
+      var send_interval = 0
       outputIFIdsArrMap.foreach(kvMap => {
-        val ifid = kvMap.get("pvalue").get
-        outputIFIdArr += (getDataInterfaceInfoById(ifid))
+        val diid = kvMap.get("diid").get
+        outputIFIdArr += (getDataInterfaceInfoById(diid))
+        send_interval = kvMap.get("interval").get.toInt
       })
       conf.setOutIFIds(outputIFIdArr.toArray)
+      conf.setInterval(send_interval)
 
       val event = new Event
       event.init(conf)

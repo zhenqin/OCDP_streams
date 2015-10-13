@@ -11,7 +11,7 @@ import scala.collection.mutable.Map
 /**
  * Created by leo on 9/29/15.
  */
-class EventServer extends Logging {
+class EventServer extends Logging with Serializable {
 
   //保存事件缓存
   def cacheEventData(keyEventIdData: Array[(String, String, String)]) {

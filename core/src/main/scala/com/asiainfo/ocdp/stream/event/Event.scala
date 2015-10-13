@@ -4,7 +4,8 @@ import com.asiainfo.ocdp.stream.config.{EventConf, MainFrameConf}
 import com.asiainfo.ocdp.stream.constant.EventConstant
 import com.asiainfo.ocdp.stream.service.EventServer
 import com.asiainfo.ocdp.stream.tools.{Json4sUtils, StreamWriterFactory}
-import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.sql.DataFrame
+
 import scala.collection.mutable.ArrayBuffer
 
 
@@ -19,17 +20,17 @@ class Event extends Serializable {
     conf = eventconf
   }
 
-  var sqlc: SQLContext = null
-
   val eventServer = new EventServer()
 
   def buildEvent(df: DataFrame, uniqKeys: String) {
 
-    var eventDF = df.filter(conf.filte_expr).selectExpr(conf.select_expr.split(","): _*)
+    val mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
+    var eventDF = df.filter(conf.filte_expr).selectExpr(mix_sel_expr: _*)
+
 
     //    eventDF.persist()
 
-    if (EventConstant.NEEDCACHE != conf.get("needcache")) {
+    if (EventConstant.NEEDCACHE != conf.getInt("needcache", 0)) {
       cacheEvent(eventDF, uniqKeys)
     }
 
@@ -70,7 +71,7 @@ class Event extends Serializable {
           while (iter.hasNext && (batchSize < batchLimit)) {
             val jsonValue = iter.next()
             val current = Json4sUtils.jsonStr2Map(jsonValue)
-            val eventKeyValue = uniqKeys.split(",").map(current(_)).mkString(",")
+            val eventKeyValue = uniqKeys.split(":").map(current(_)).mkString(":")
             batchArrayBuffer.append((EventConstant.EVENT_CACHE_PREFIX_NAME + eventKeyValue,
               EventConstant.EVENTCACHE_FIELD_ROWEVENTID_PREFIX_KEY + conf.id, jsonValue))
 
@@ -116,7 +117,7 @@ class Event extends Serializable {
           while (iter.hasNext && (batchSize < batchLimit)) {
             val jsonValue = iter.next()
             val current = Json4sUtils.jsonStr2Map(jsonValue)
-            val eventKeyValue = uniqKeys.split(",").map(current(_)).mkString(",")
+            val eventKeyValue = uniqKeys.split(":").map(current(_)).mkString(":")
             batchArrayBuffer.append((EventConstant.EVENT_CACHE_PREFIX_NAME + eventKeyValue,
               Array(EventConstant.EVENTCACHE_FIELD_TIMEEVENTID_PREFIX_KEY + conf.id)))
             resultBuffer.append((EventConstant.EVENT_CACHE_PREFIX_NAME + eventKeyValue, jsonValue))
@@ -151,7 +152,7 @@ class Event extends Serializable {
     }
     })
 
-    sqlc.read.json(jsonRDD)
+    eventDF.sqlContext.read.json(jsonRDD)
   }
 
   def outputEvent(eventDF: DataFrame, uniqKeys: String) {

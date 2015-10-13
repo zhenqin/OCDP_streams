@@ -12,7 +12,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
  * Created by leo on 9/18/15.
  */
-trait StreamWriter {
+trait StreamWriter extends Serializable {
   def push(df: DataFrame, conf: EventConf, uniqKeys: String)
 }
 
@@ -26,16 +26,18 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
     val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys)
 
     resultRDD.mapPartitions(iter => {
-      val line = iter.next()
-      val key = line._1
-      val msg = line._2
-      val messages = ArrayBuffer[KeyedMessage[String, String]]()
-      if (key == null) {
-        messages.append(new KeyedMessage[String, String](topic, msg))
-      } else {
-        messages.append(new KeyedMessage[String, String](topic, key, msg))
+      if (iter.hasNext) {
+        val line = iter.next()
+        val key = line._1
+        val msg = line._2
+        val messages = ArrayBuffer[KeyedMessage[String, String]]()
+        if (key == null) {
+          messages.append(new KeyedMessage[String, String](topic, msg))
+        } else {
+          messages.append(new KeyedMessage[String, String](topic, key, msg))
+        }
+        KafkaSendTool.sendMessage(diConf.dsConf, messages.toList)
       }
-      KafkaSendTool.sendMessage(diConf.dsConf, messages.toList)
       iter
     }).count()
 

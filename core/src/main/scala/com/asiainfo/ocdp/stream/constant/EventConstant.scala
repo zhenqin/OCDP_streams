@@ -5,8 +5,8 @@ package com.asiainfo.ocdp.stream.constant
  */
 object EventConstant {
 
-  val NEEDCACHE = 0
-  val NOTNEEDCACHE = 1
+  val NOTNEEDCACHE = 0
+  val NEEDCACHE = 1
 
   val RealtimeTransmission = 0
 
