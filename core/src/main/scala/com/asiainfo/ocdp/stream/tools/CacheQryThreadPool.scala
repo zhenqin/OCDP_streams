@@ -179,7 +179,7 @@ class QryEventCache(value: Array[(String, Array[String])]) extends Callable[Map[
           resultMap.put(rowKey, Map[String, String]())
         }
         fields.zip(result).foreach { case (k, v) =>
-          resultMap.get(rowKey).get.put(k, new String(v))
+          if (v != null) resultMap.get(rowKey).get.put(k, new String(v))
         }
       }
 

@@ -40,7 +40,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 //    this.ssc = ssc
     val sqlc = new SQLContext(ssc.sparkContext)
 
-    events.map(_.sqlc = sqlc)
+//    events.map(_.sqlc = sqlc)
 
     //1 根据输入数据接口配置，生成数据流 DStream
     val inputStream = readSource(ssc)

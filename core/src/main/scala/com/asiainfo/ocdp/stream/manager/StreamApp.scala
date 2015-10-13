@@ -29,8 +29,7 @@ object StreamApp extends Logging {
     //1 初始化 streamingContext
     val sparkConf = new SparkConf().setAppName(taskConf.getName)
 
-
-    sparkConf.setMaster("local[1]")
+    sparkConf.setMaster("local[2]")
     sparkConf.setAppName("local")
 
 
@@ -51,14 +50,13 @@ object StreamApp extends Logging {
         taskServer.startTask(taskConf.getId)
         logInfo("Start task " + taskConf.getId + " sucess !")
       }
-
       ssc.awaitTermination()
-
     } catch {
       case e: Exception => {
         e.printStackTrace()
       }
     } finally {
+//      ssc.awaitTermination()
       ssc.stop()
       taskServer.stopTask(taskConf.getId)
       logInfo("Stop task " + taskConf.getId + " sucess !")

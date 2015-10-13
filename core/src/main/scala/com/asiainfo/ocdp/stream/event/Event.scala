@@ -27,10 +27,9 @@ class Event extends Serializable {
     val mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
     var eventDF = df.filter(conf.filte_expr).selectExpr(mix_sel_expr: _*)
 
-
     //    eventDF.persist()
 
-    if (EventConstant.NEEDCACHE != conf.getInt("needcache", 0)) {
+    if (EventConstant.NEEDCACHE == conf.getInt("needcache", 0)) {
       cacheEvent(eventDF, uniqKeys)
     }
 
@@ -93,10 +92,10 @@ class Event extends Serializable {
 
   def checkEvent(eventDF: DataFrame, uniqKeys: String): DataFrame = {
     var jsonRDD = eventDF.toJSON
-    jsonRDD = jsonRDD.mapPartitions({ iter => {
+    jsonRDD = jsonRDD.mapPartitions(iter => {
       new Iterator[String] {
         private[this] var currentPos: Int = -1
-        private[this] val resultBuffer = new ArrayBuffer[(String, String)]()
+        private[this] var resultBuffer = new ArrayBuffer[(String, String)]()
 
         override def hasNext: Boolean = (currentPos != -1 && currentPos < resultBuffer.length) || (iter.hasNext && batchNext())
 
@@ -109,7 +108,6 @@ class Event extends Serializable {
         def batchNext(): Boolean = {
           currentPos = -1
           var batchSize = 0
-          var result = false
           resultBuffer.clear()
           val batchArrayBuffer = new ArrayBuffer[(String, Array[String])]()
 
@@ -126,33 +124,45 @@ class Event extends Serializable {
 
           //构建一个保存线程，提交一个批次的数据
           if (batchArrayBuffer.length > 0) {
-            result = true
-            currentPos = 0
             val eventTimes = eventServer.getEventCache(batchArrayBuffer.toArray)
 
             val updateArrayBuffer = new ArrayBuffer[(String, String, String)]()
             val current_time = System.currentTimeMillis()
             val outputKeys = eventTimes.filter(event => {
-              val time_field = event._2.head._1
-              val old_time = event._2.head._2
-              if (old_time == null || current_time >= (old_time.toLong + conf.getInterval * 1000)) {
-                updateArrayBuffer.append((event._1, time_field, String.valueOf(current_time)))
+
+              if (event._2.size == 0) {
+                updateArrayBuffer.append((event._1, EventConstant.EVENTCACHE_FIELD_TIMEEVENTID_PREFIX_KEY + conf.id, String.valueOf(current_time)))
                 true
-              } else false
+              } else {
+                val time_field = event._2.head._1
+                val old_time = event._2.head._2
+                if (current_time >= (old_time.toLong + conf.getInterval * 1000)) {
+                  updateArrayBuffer.append((event._1, time_field, String.valueOf(current_time)))
+                  true
+                } else false
+              }
             }).keySet
 
             eventServer.cacheEventData(updateArrayBuffer.toArray)
 
-            resultBuffer.dropWhile(x => !outputKeys.contains(x._1))
+            resultBuffer = resultBuffer.dropWhile(x => !outputKeys.contains(x._1))
 
           }
-          result
+
+          if (resultBuffer.length > 0) {
+            currentPos = 0
+            true
+          } else false
+
         }
       }
     }
-    })
+    )
 
-    eventDF.sqlContext.read.json(jsonRDD)
+    jsonRDD.persist()
+    val df = eventDF.sqlContext.read.json(jsonRDD)
+//    jsonRDD.unpersist()
+    df
   }
 
   def outputEvent(eventDF: DataFrame, uniqKeys: String) {

@@ -116,7 +116,7 @@ class DataInterfaceServer extends Logging with Serializable {
       conf.setP_event_id(x.get("p_event_id").get)
 
       //      val propsJsonStr = x.get("properties").getOrElse(null)
-      val propsJsonStr = """{"output_dis":[{"diid":"ff80808150375ae10150377e86ab0005","delim":"","interval":"0"}],"props":[]}"""
+      val propsJsonStr = """{"output_dis":[{"diid":"ff80808150375ae10150377e86ab0005","delim":"","interval":"180"}],"props":[]}"""
 
       // 业务对应的输出数据接口配置，每个业务一个输出事件接口
       val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")

@@ -19,5 +19,7 @@ trait Label extends Serializable {
 
   def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache)
 
-  def getQryKeys(source: Map[String, String]): Set[String] = null
+  def getQryKeys(line: Map[String, String]): Set[String] = null
+
+//  def labelFields: Array[String]
 }

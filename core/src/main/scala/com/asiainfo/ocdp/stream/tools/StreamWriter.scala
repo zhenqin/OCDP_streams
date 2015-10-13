@@ -5,7 +5,7 @@ import java.util.Properties
 import com.asiainfo.ocdp.stream.config.{DataInterfaceConf, EventConf}
 import kafka.producer.KeyedMessage
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{SaveMode, DataFrame}
+import org.apache.spark.sql.{DataFrame, SaveMode}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -20,7 +20,6 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
 
   def push(df: DataFrame, conf: EventConf, uniqKeys: String) {
     val jsonRDD = df.toJSON
-
     val topic = diConf.get("topic")
 
     val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys)
@@ -40,6 +39,20 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
       }
       iter
     }).count()
+
+    /*resultRDD.map(line => {
+      val key = line._1
+      val msg = line._2
+      val messages = ArrayBuffer[KeyedMessage[String, String]]()
+      if (key == null) {
+        messages.append(new KeyedMessage[String, String](topic, msg))
+      } else {
+        messages.append(new KeyedMessage[String, String](topic, key, msg))
+      }
+      KafkaSendTool.sendMessage(diConf.dsConf, messages.toList)
+
+      line
+    }).count()*/
 
   }
 
