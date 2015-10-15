@@ -11,14 +11,14 @@ class UserBaseInfoRule extends Label {
 
   val logger = LoggerFactory.getLogger(this.getClass)
 
-  def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache) = {
+  override def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache) = {
 
     val normal_imsi = line("imsi")
 
     val info_cols = conf.get("user_info_cols").split(",")
     val qryKeys = getQryKeys(line)
 
-    val fieldMap = mutable.Map[String, String]()
+    var fieldMap = mutable.Map[String, String]()
 
     if (qryKeys.size == 0) {
       // do nothing
@@ -75,7 +75,8 @@ class UserBaseInfoRule extends Label {
       // do nothing
     }
 
-    line.foreach(fieldMap.+(_))
+    //    line.foreach(fieldMap.+(_))
+    fieldMap = fieldMap ++ line
 
     (fieldMap.toMap, cache)
   }

@@ -160,9 +160,7 @@ class Event extends Serializable {
     )
 
     jsonRDD.persist()
-    val df = eventDF.sqlContext.read.json(jsonRDD)
-//    jsonRDD.unpersist()
-    df
+    eventDF.sqlContext.read.json(jsonRDD)
   }
 
   def outputEvent(eventDF: DataFrame, uniqKeys: String) {
