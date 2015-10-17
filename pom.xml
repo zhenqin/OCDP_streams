@@ -11,7 +11,7 @@
 
     <modules>
         <module>core</module>
-        <!-- <module>ShanDongFeature</module> -->
+        <module>ShanDongFeature</module>
     </modules>
 
     <properties>

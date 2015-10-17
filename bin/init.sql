@@ -20,7 +20,7 @@ INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"
 INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"queue","","",0);
 INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"appJars","streaming-core-1.0-SNAPSHOT.jar","",0);
 INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"jars","streaming-event-mc-1.0-SNAPSHOT.jar","",0);
-INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"interface_class","com.asiainfo.ocdp.streaming.App_Interface","",0);
+INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"interface_class","com.asiainfo.ocdp.streaming.manager.App_Interface","",0);
 INSERT INTO STREAM_SYSTEMPROP (id,name,value,description,issys) VALUES (uuid(),"subject_class","","",0);
 
 
