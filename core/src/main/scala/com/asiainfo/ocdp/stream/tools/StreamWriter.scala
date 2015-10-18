@@ -40,20 +40,6 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
       iter
     }).count()
 
-    /*resultRDD.map(line => {
-      val key = line._1
-      val msg = line._2
-      val messages = ArrayBuffer[KeyedMessage[String, String]]()
-      if (key == null) {
-        messages.append(new KeyedMessage[String, String](topic, msg))
-      } else {
-        messages.append(new KeyedMessage[String, String](topic, key, msg))
-      }
-      KafkaSendTool.sendMessage(diConf.dsConf, messages.toList)
-
-      line
-    }).count()*/
-
   }
 
   /**

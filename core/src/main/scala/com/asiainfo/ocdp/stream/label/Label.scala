@@ -21,5 +21,9 @@ trait Label extends Serializable {
 
   def getQryKeys(line: Map[String, String]): Set[String] = null
 
-//  def labelFields: Array[String]
+  def fieldsMap(): mutable.Map[String, String] = {
+    val fields = mutable.Map[String, String]()
+    conf.getFields.foreach(x => fields += (x -> ""))
+    fields
+  }
 }

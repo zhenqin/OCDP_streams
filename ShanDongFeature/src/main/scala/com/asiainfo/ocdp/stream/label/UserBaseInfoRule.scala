@@ -18,7 +18,7 @@ class UserBaseInfoRule extends Label {
     val info_cols = conf.get("user_info_cols").split(",")
     val qryKeys = getQryKeys(line)
 
-    var fieldMap = mutable.Map[String, String]()
+    var fieldMap = fieldsMap()
 
     if (qryKeys.size == 0) {
       // do nothing
@@ -76,7 +76,7 @@ class UserBaseInfoRule extends Label {
     }
 
     //    line.foreach(fieldMap.+(_))
-    fieldMap = fieldMap ++ line
+    fieldMap ++= line
 
     (fieldMap.toMap, cache)
   }
@@ -86,5 +86,6 @@ class UserBaseInfoRule extends Label {
       filterNot(value => {
       value == null || value == "000000000000000"
     }).map("userinfo:" + _)
+
 
 }

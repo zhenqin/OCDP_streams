@@ -23,10 +23,24 @@ object Json4sUtils {
    * @param arrMapFieldName fieldName for schema json string
    * @return structType of sparkSQL for the schema
    */
-  def jsonStr2StructType(jsonStr: String, arrMapFieldName: String): StructType = {
+  def jsonStr2BaseStructType(jsonStr: String, arrMapFieldName: String): StructType = {
     val fieldsNameTypeArrMap = jsonStr2ArrMap(jsonStr, arrMapFieldName)
+    val fieldsInfo = fieldsNameTypeArrMap.map(fieldsNameTypeMap => (fieldsNameTypeMap("pname"), "String", "true"))
+    generateStructType(fieldsInfo)
+  }
+
+
+  /**
+   *
+   * @param jsonStr schema for struct data with fieldName and FieldDataType, in json string format
+   * @param baseFieldName fieldName for schema json string
+   * @param udfFieldName fieldName for schema json string
+   * @return structType of sparkSQL for the schema
+   */
+  def jsonStr2UdfStructType(jsonStr: String, baseFieldName: String, udfFieldName: String): StructType = {
+    val fieldsNameTypeArrMap = jsonStr2ArrMap(jsonStr, baseFieldName).union(jsonStr2ArrMap(jsonStr, udfFieldName))
+
     val fieldsInfo = fieldsNameTypeArrMap.map(fieldsNameTypeMap => {
-      //      (fieldsNameTypeMap("pname"), fieldsNameTypeMap("ptype"), "true")
       var field_expr = ""
       if (fieldsNameTypeMap.contains("pvalue")) field_expr = fieldsNameTypeMap("pvalue") + " as " + fieldsNameTypeMap("pname")
       else field_expr = fieldsNameTypeMap("pname")

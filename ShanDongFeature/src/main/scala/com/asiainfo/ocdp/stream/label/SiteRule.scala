@@ -18,7 +18,7 @@ class SiteRule extends Label {
 
   override def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache) = {
     // 装载业务区域标签属性
-    var newLine = scala.collection.mutable.Map[String, String]()
+    var newLine = fieldsMap()
     // 根据largeCell解析出所属区域
     //    println("current lacci : " + getQryKeys(logRow))
     val cachedArea = labelQryData.get(getQryKeys(line).head).get
@@ -37,7 +37,7 @@ class SiteRule extends Label {
 
     // 标记行政区域标签
     // 20150727 新增上下班业务标签 labels['area_info']['lac_ci']
-    newLine = newLine ++ cachedArea.filter(_._1 != LabelConstant.LABEL_AREA_LIST_KEY) ++ Map("lac_ci" -> (line("lac") + line("ci")))
+    newLine = newLine ++ cachedArea.filter(_._1 != LabelConstant.LABEL_AREA_LIST_KEY) ++ Map("lac_ci" -> (line("lac") + line("ci"))) ++ line
 
     (newLine.toMap, cache)
   }

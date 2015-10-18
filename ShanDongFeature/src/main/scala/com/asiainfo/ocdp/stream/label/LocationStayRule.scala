@@ -22,6 +22,8 @@ class LocationStayRule extends Label {
   // 无效数据阈值的设定
   lazy val thresholdValue = conf.getLong(LabelConstant.STAY_TIMEOUT, LabelConstant.DEFAULT_TIMEOUT_VALUE)
 
+  val type_sine = "stay_"
+
   /**
    * 框架调用入口方法
    */
@@ -37,7 +39,7 @@ class LocationStayRule extends Label {
     // map属性转换
     val cacheMutableMap = transformCacheMap2mutableMap(cacheImmutableMap)
     // mcsource 打标签用
-    var mcStayLabelsMap = mutable.Map[String, String]()
+    var mcStayLabelsMap = fieldsMap()
 
     // cache中所有区域的最大lastTime
     val cacheMaxLastTime = getCacheMaxLastTime(cacheMutableMap)
@@ -51,18 +53,18 @@ class LocationStayRule extends Label {
       // A.此用的所有区域在cache中的信息已经过期视为无效，标签打为“0”；重新设定cache;
       if (timeMs - cacheMaxLastTime > thresholdValue) {
         // 1. 连续停留标签置“0”
-        mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
+        mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
         // 2. 清除cache信息
         cacheMutableMap.clear()
         // 3. 重置cache信息
         val cacheStayLabelsMap = mutable.Map[String, String]()
         cacheStayLabelsMap += (LabelConstant.LABEL_STAY_FIRSTTIME -> timeMs.toString)
         cacheStayLabelsMap += (LabelConstant.LABEL_STAY_LASTTIME -> timeMs.toString)
-        cacheMutableMap += (location -> cacheStayLabelsMap)
+        cacheMutableMap += ((type_sine + location) -> cacheStayLabelsMap)
       } else if (cacheMaxLastTime - timeMs > thresholdValue) {
         //B.此条数据为延迟到达的数据，已超过阈值视为无效，标签打为“0”；cache不做设定;
         // 1. 连续停留标签置“0”
-        mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
+        mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
       } else {
         //C.此条数据时间为[(maxLastTime-thresholdValue)~maxLastTime~(maxLastTime+thresholdValue)]之间
         labelAction(location, cacheMutableMap, mcStayLabelsMap, timeMs)
@@ -70,7 +72,7 @@ class LocationStayRule extends Label {
     })
 
     // c. 给mcsoruce设定连续停留[LABEL_STAY]标签
-    mcStayLabelsMap = mcStayLabelsMap ++ line
+    mcStayLabelsMap ++= line
 
     //3更新缓存
     // map属性转换

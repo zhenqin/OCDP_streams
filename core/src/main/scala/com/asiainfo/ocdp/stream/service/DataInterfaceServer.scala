@@ -21,22 +21,28 @@ class DataInterfaceServer extends Logging with Serializable {
       "from " + TableInfoConstant.DataInterfaceTableName +
       " where id='" + id + "' and status = 1"
 
-    val interface = JDBCUtil.query(sql).head
-    conf.setDiid(interface.get("id").get)
-    conf.setName(interface.get("name").get)
-    conf.setDiType(interface.get("type").get.toInt)
+    val result = JDBCUtil.query(sql)
 
-    val dsconf = getDataSourceInfoById(interface.get("dsid").get)
-    conf.setDsConf(dsconf)
+    if (result.length > 0) {
+      val interface = result.head
+      conf.setDiid(interface.get("id").get)
+      conf.setName(interface.get("name").get)
+      conf.setDiType(interface.get("type").get.toInt)
 
-    val propsJsonStr = interface.get("properties").getOrElse(null)
-    conf.setBaseSchema(Json4sUtils.jsonStr2StructType(propsJsonStr, "fields"))
-    conf.setUDFSchema(Json4sUtils.jsonStr2StructType(propsJsonStr, "userFields"))
+      val dsconf = getDataSourceInfoById(interface.get("dsid").get)
+      conf.setDsConf(dsconf)
 
-    val propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "props")
-    propsMap.foreach(kvMap => {
-      if (!kvMap.isEmpty) conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get)
-    })
+      val propsJsonStr = interface.get("properties").getOrElse(null)
+      conf.setBaseSchema(Json4sUtils.jsonStr2BaseStructType(propsJsonStr, "fields"))
+
+      conf.setUDFSchema(Json4sUtils.jsonStr2UdfStructType(propsJsonStr, "fields", "userFields"))
+
+      val propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "props")
+      propsMap.foreach(kvMap => {
+        if (!kvMap.isEmpty) conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get)
+      })
+
+    }
     conf
   }
 
@@ -71,7 +77,7 @@ class DataInterfaceServer extends Logging with Serializable {
       conf.setDiid(id)
       conf.setName(x.get("name").get)
       conf.setClass_name(x.get("class_name").get)
-      conf.setPlabelId(x.get("plabelid").get)
+      conf.setPlabelId(x.get("p_label_id").get)
 
       val propsJsonStr = x.get("properties").getOrElse(null)
       if (propsJsonStr != null) {
@@ -79,6 +85,13 @@ class DataInterfaceServer extends Logging with Serializable {
         propsArrMap.foreach(kvMap => {
           if (!kvMap.isEmpty) conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get)
         })
+
+        val fieldsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "labelItems")
+        val fieldsList = ArrayBuffer[String]()
+        fieldsArrMap.foreach(kvMap => {
+          if (!kvMap.isEmpty) fieldsList += kvMap.get("pvalue").get
+        })
+        conf.setFields(fieldsList.toList)
       }
 
       val label: Label = Class.forName(conf.getClass_name).newInstance().asInstanceOf[Label]
@@ -99,7 +112,7 @@ class DataInterfaceServer extends Logging with Serializable {
     /*val sql = "select id, name, select_expr, filter_expr, p_event_id, properties " +
       "from " + TableInfoConstant.EventTableName +
       " where diid = '" + id + "' and status = 1"*/
-    val sql = "select id, name, filter_expr, p_event_id, properties " +
+    val sql = "select id, name, select_expr, filter_expr, p_event_id, properties " +
       "from " + TableInfoConstant.EventTableName +
       " where diid = '" + id + "' and status = 1"
     val data = JDBCUtil.query(sql)
@@ -110,14 +123,11 @@ class DataInterfaceServer extends Logging with Serializable {
       conf.setId(x.get("id").get)
       conf.setInIFId(id)
       conf.setName(x.get("name").get)
-//      conf.setSelect_expr(x.get("select_expr").get)
-      conf.setSelect_expr("eventID,time,ci,relstatus")
+      conf.setSelect_expr(x.get("select_expr").get)
       conf.setFilte_expr(x.get("filter_expr").get)
       conf.setP_event_id(x.get("p_event_id").get)
 
-      //      val propsJsonStr = x.get("properties").getOrElse(null)
-      val propsJsonStr = """{"output_dis":[{"diid":"ff80808150375ae10150377e86ab0005","delim":"","interval":"180"}],"props":[]}"""
-
+      val propsJsonStr = x.get("properties").getOrElse(null)
       // 业务对应的输出数据接口配置，每个业务一个输出事件接口
       val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
       val outputIFIdArr = ArrayBuffer[DataInterfaceConf]()
@@ -142,7 +152,7 @@ class DataInterfaceServer extends Logging with Serializable {
       val p1 = e1.conf.p_event_id
       val i2 = e2.conf.id
       val p2 = e2.conf.p_event_id
-      p1.equals(i2) || p2.equals(i1) || i1.compareTo(i2) < 0
+      i2.equals(p1) || i1.equals(p2) || i1.compareTo(i2) < 0
     }).toArray
   }
 

@@ -44,18 +44,19 @@ class LabelTrack extends Label {
     val speed = distance / (timeMs - time_old.toDouble)
 
     /** Extended stream label: 扩展实时标签到流数据() */
-    val newLine = line ++ Map[String, String](
-      "speed" -> speed.toString,
-      "distance" -> distance.toString,
-      "last_lac_ci" -> last_lacCi
-    )
+    val newLine = fieldsMap()
+    newLine += ("speed" -> speed.toString)
+    newLine += ("distance" -> distance.toString)
+    newLine += ("last_lac_ci" -> last_lacCi)
+
+    newLine ++= line
 
     /** Update Codis Realtime Object: 更新Codis(用户实时标签对象表) */
     labelTrackCache.cacheTrack = Map[String, String](
       "geo_longitude" -> geo_longitude_new, "geo_latitude" -> geo_latitude_new, "time" -> timeMs.toString
     )
 
-    (newLine, labelTrackCache)
+    (newLine.toMap, labelTrackCache)
   }
 
   /**

@@ -25,6 +25,7 @@ class Event extends Serializable {
   def buildEvent(df: DataFrame, uniqKeys: String) {
 
     val mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
+
     var eventDF = df.filter(conf.filte_expr).selectExpr(mix_sel_expr: _*)
 
     //    eventDF.persist()
