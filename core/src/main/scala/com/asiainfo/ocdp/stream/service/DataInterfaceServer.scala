@@ -1,8 +1,8 @@
 package com.asiainfo.ocdp.stream.service
 
-import com.asiainfo.ocdp.stream.common.{JDBCUtil, Logging}
+import com.asiainfo.ocdp.stream.common.{ JDBCUtil, Logging }
 import com.asiainfo.ocdp.stream.config._
-import com.asiainfo.ocdp.stream.constant.{DataSourceConstant, TableInfoConstant}
+import com.asiainfo.ocdp.stream.constant.{ DataSourceConstant, TableInfoConstant }
 import com.asiainfo.ocdp.stream.event.Event
 import com.asiainfo.ocdp.stream.label.Label
 import com.asiainfo.ocdp.stream.tools.Json4sUtils
@@ -16,8 +16,10 @@ class DataInterfaceServer extends Logging with Serializable {
   def getDataInterfaceInfoById(id: String): DataInterfaceConf = {
 
     val conf = new DataInterfaceConf()
-
-    val sql = "select id, name, dsid, type, status, properties " +
+    // modify by surq at 2015.11.09 start
+    //    val sql = "select id, name, dsid, type, status, properties " +
+    val sql = "select id, filter_expr,name, dsid, type, status, properties " +
+      // modify by surq at 2015.11.09 end
       "from " + TableInfoConstant.DataInterfaceTableName +
       " where id='" + id + "' and status = 1"
 
@@ -28,7 +30,9 @@ class DataInterfaceServer extends Logging with Serializable {
       conf.setDiid(interface.get("id").get)
       conf.setName(interface.get("name").get)
       conf.setDiType(interface.get("type").get.toInt)
-
+      // add by surq at 2015.11.09 start
+      conf.set("filter_expr", interface.get("filter_expr").get)
+      // add by surq at 2015.11.09 end
       val dsconf = getDataSourceInfoById(interface.get("dsid").get)
       conf.setDsConf(dsconf)
 
@@ -128,20 +132,29 @@ class DataInterfaceServer extends Logging with Serializable {
       conf.setP_event_id(x.get("p_event_id").get)
 
       val propsJsonStr = x.get("properties").getOrElse(null)
+
+      //
+      val propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "props")
+      propsMap.foreach(kvMap => {
+        if (!kvMap.isEmpty) conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get)
+      })
+
       // 业务对应的输出数据接口配置，每个业务一个输出事件接口
       val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
       val outputIFIdArr = ArrayBuffer[DataInterfaceConf]()
 
       //TODO send_interval should bound on dataInterface, now just one di , so set the last value
       var send_interval = 0
+      var delim =","
       outputIFIdsArrMap.foreach(kvMap => {
         val diid = kvMap.get("diid").get
         outputIFIdArr += (getDataInterfaceInfoById(diid))
         send_interval = kvMap.get("interval").get.toInt
+        delim = kvMap.get("delim").get
       })
       conf.setOutIFIds(outputIFIdArr.toArray)
       conf.setInterval(send_interval)
-
+      conf.setDelim(delim)
       val event = new Event
       event.init(conf)
       eventarr += event

@@ -5,13 +5,15 @@ import com.asiainfo.ocdp.stream.config.MainFrameConf
 import com.asiainfo.ocdp.stream.event.Event
 import com.asiainfo.ocdp.stream.manager.StreamTask
 import com.asiainfo.ocdp.stream.service.DataInterfaceServer
-import com.asiainfo.ocdp.stream.tools.{CacheFactory, Json4sUtils}
+import com.asiainfo.ocdp.stream.tools.{ CacheFactory, Json4sUtils }
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.sql.{ DataFrame, Row, SQLContext }
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.{mutable, immutable}
+import scala.collection.{ mutable, immutable }
+import org.apache.spark.rdd.RDD
+import java.text.SimpleDateFormat
 
 /**
  * Created by leo on 9/16/15.
@@ -37,13 +39,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     //    this.ssc = ssc
     val sqlc = new SQLContext(ssc.sparkContext)
 
-    sqlc.udf.register("Conv", (data: String) => {
-      var lc = Integer.toHexString(data.toInt).toUpperCase
-      while (lc.length < 4) {
-        lc = "0" + lc
-      }
-      lc
-    })
+    registFunction(sqlc)
 
     //1 根据输入数据接口配置，生成数据流 DStream
     val inputStream = readSource(ssc)
@@ -64,29 +60,66 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
         }
 
         val df: DataFrame = sqlc.createDataFrame(rowRDD, schema)
-
-        if (df.count() > 0) {
-          val mixDF = df.filter(conf.get("filter_expr", "1=1")).selectExpr(udfSchema.fieldNames: _*)
-
-          df.persist()
-          val enhancedDF = execLabels(mixDF)
-          df.unpersist()
-
-          enhancedDF.persist
+        // modified by surq at 2015.11.11 start
+        var mixDF: DataFrame = null
+        val filter_expr = conf.get("filter_expr").trim()
+        if (filter_expr != "") mixDF = df.selectExpr(udfSchema.fieldNames: _*).filter(filter_expr)
+        else mixDF = df.selectExpr(udfSchema.fieldNames: _*)
+        // deleted by surq at 2015.11.11
+        // val mixDF = df.filter(conf.get("filter_expr", "1=1")).selectExpr(udfSchema.fieldNames: _*)
+        // modified by surq at 2015.11.11 end
+        // add by surq at 2015.11.09 start
+        mixDF.persist()
+        if (mixDF.count > 0) {
+          val enDF = execLabels(mixDF)
+          val enhancedDF = enDF._1
+          val cacheRDD = enDF._2
+          enhancedDF.persist()
           makeEvents(enhancedDF, conf.get("uniqKeys"))
-          //        subscribeEvents(eventMap)
           enhancedDF.unpersist()
-
         }
+        mixDF.unpersist()
+        // add by surq at 2015.11.09 end
+        // deleted by surq at 2015.11.09 start
+        //          df.persist()
+        //          val enhancedDF = execLabels(mixDF)
+        //          df.unpersist()
+        //
+        //          enhancedDF.persist
+        //          makeEvents(enhancedDF, conf.get("uniqKeys"))
+        //          //        subscribeEvents(eventMap)
+        //          enhancedDF.unpersist()
+        // deleted by surq at 2015.11.09 end
       }
     })
+  }
+
+  def registFunction(sqlc: SQLContext) {
+    sqlc.udf.register("Conv", (data: String) => {
+      var lc = Integer.toHexString(data.toInt).toUpperCase
+      while (lc.length < 4) {
+        lc = "0" + lc
+      }
+      lc
+    })
+
+    sqlc.udf.register("concat", (firststr: String, secondstr: String) => firststr + secondstr)
+
+    sqlc.udf.register("from_unixtime", (date: String, format: String) => {
+      val df = new SimpleDateFormat(format);
+      df.parse(date).toString();
+    })
+
+    sqlc.udf.register("unix_timestamp", () => System.currentTimeMillis().toString)
+    sqlc.udf.register("currenttimesub", (subduction: Int) => (System.currentTimeMillis - subduction).toString)
+    sqlc.udf.register("currenttimeadd", (add: Int) => (System.currentTimeMillis + add) .toString)
   }
 
   final def readSource(ssc: StreamingContext): DStream[String] = {
     StreamingInputReader.readSource(ssc, conf)
   }
 
-  def execLabels(df: DataFrame): DataFrame = {
+  def execLabels(df: DataFrame): (DataFrame, RDD[String]) = {
     println(" Begin exec labes : " + System.currentTimeMillis())
 
     val jsonRDD = df.toJSON
@@ -202,15 +235,14 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
       }
     })
 
-    df.sqlContext.read.json(enhancedJsonRDD)
+    enhancedJsonRDD.persist()
+    (df.sqlContext.read.json(enhancedJsonRDD), enhancedJsonRDD)
   }
 
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
     println(" Begin exec evets : " + System.currentTimeMillis())
 
-    df.persist()
     events.map(event => event.buildEvent(df, uniqKeys))
-    df.unpersist()
 
   }
 }

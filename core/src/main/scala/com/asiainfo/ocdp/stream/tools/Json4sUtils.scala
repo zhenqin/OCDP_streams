@@ -2,7 +2,7 @@ package com.asiainfo.ocdp.stream.tools
 
 import org.apache.spark.sql.types._
 import org.json4s.DefaultFormats
-import org.json4s.JsonAST.{JString, JValue}
+import org.json4s.JsonAST.{ JString, JValue }
 import org.json4s.JsonDSL._
 import org.json4s.jackson.JsonMethods._
 import scala.collection.mutable.ArrayBuffer
@@ -16,6 +16,14 @@ object Json4sUtils {
 
   }
 
+  /**
+   *
+   * @param jsonStr input string with json format
+   * @param fields  Json fields name
+   * @return output string concatnated by comma 
+   */
+  def jsonStr2String(jsonStr: String, fields: Array[String],delim:String): String = 
+    jsonStr2ArrTuple2(jsonStr, fields).map(tuple => tuple._2).mkString(delim)
 
   /**
    *
@@ -28,7 +36,6 @@ object Json4sUtils {
     val fieldsInfo = fieldsNameTypeArrMap.map(fieldsNameTypeMap => (fieldsNameTypeMap("pname"), "String", "true"))
     generateStructType(fieldsInfo)
   }
-
 
   /**
    *
@@ -70,7 +77,6 @@ object Json4sUtils {
     generateStructType(fieldsInfo)
   }
 
-
   /**
    * 根据指定字段名和类型信息生成构建SparkSQL DataFrame的schema
    * @param fields 顺序指定字段名、类型、是否允许为空
@@ -86,7 +92,6 @@ object Json4sUtils {
     val schema = StructType(structFields.toArray)
     schema
   }
-
 
   //TODO: 暂不支持复合数据类型
   /**
@@ -139,25 +144,25 @@ object Json4sUtils {
    * example:
    * val propsJsonStr3 = """[{"fieldName":"col1","fieldDataType":"String"},{"fieldName":"col2","fieldDataType":"Int"},{"fieldName":"col3","fieldDataType":"Long"},{"fieldName":"col4","fieldDataType":"Boolean"},{"fieldName":"col5","fieldDataType":"Double"}]"""
    * propsJson3 = JArray(List(JObject(List((fieldName,JString(col1)), (fieldDataType,JString(String)))), JObject(List((fieldName,JString(col2)), (fieldDataType,JString(Int)))), JObject(List((fieldName,JString(col3)), (fieldDataType,JString(Long)))), JObject(List((fieldName,JString(col4)), (fieldDataType,JString(Boolean)))), JObject(List((fieldName,JString(col5)), (fieldDataType,JString(Double))))))
-
-       ````propsJson3_pretty = [ {
-            "fieldName" : "col1",
-            "fieldDataType" : "String"
-          }, {
-            "fieldName" : "col2",
-            "fieldDataType" : "Int"
-          }, {
-            "fieldName" : "col3",
-            "fieldDataType" : "Long"
-          }, {
-            "fieldName" : "col4",
-            "fieldDataType" : "Boolean"
-          }, {
-            "fieldName" : "col5",
-            "fieldDataType" : "Double"
-          } ]
-          propsJson3_compact = [{"fieldName":"col1","fieldDataType":"String"},{"fieldName":"col2","fieldDataType":"Int"},{"fieldName":"col3","fieldDataType":"Long"},{"fieldName":"col4","fieldDataType":"Boolean"},{"fieldName":"col5","fieldDataType":"Double"}]
-       ````
+   *
+   * ````propsJson3_pretty = [ {
+   * "fieldName" : "col1",
+   * "fieldDataType" : "String"
+   * }, {
+   * "fieldName" : "col2",
+   * "fieldDataType" : "Int"
+   * }, {
+   * "fieldName" : "col3",
+   * "fieldDataType" : "Long"
+   * }, {
+   * "fieldName" : "col4",
+   * "fieldDataType" : "Boolean"
+   * }, {
+   * "fieldName" : "col5",
+   * "fieldDataType" : "Double"
+   * } ]
+   * propsJson3_compact = [{"fieldName":"col1","fieldDataType":"String"},{"fieldName":"col2","fieldDataType":"Int"},{"fieldName":"col3","fieldDataType":"Long"},{"fieldName":"col4","fieldDataType":"Boolean"},{"fieldName":"col5","fieldDataType":"Double"}]
+   * ````
    */
   def jsonStr2ArrMap(jsonStr: String): Array[Map[String, String]] = {
     val jsonValue = parse(jsonStr)

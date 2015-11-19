@@ -1,6 +1,6 @@
 package com.asiainfo.ocdp.stream.common
 
-import java.sql.{Connection, DriverManager, ResultSet, Statement}
+import java.sql.{ Connection, DriverManager, ResultSet, Statement }
 
 import com.asiainfo.ocdp.stream.constant.CommonConstant
 import scala.collection.mutable.ArrayBuffer
@@ -47,10 +47,9 @@ object JDBCUtil {
         result += line
       }
       result.toArray
-    }
-    finally {
-      if (statement != null) statement.close()
+    } finally {
       if (rs != null) rs.close()
+      if (statement != null) statement.close()
       if (connection != null) connection.close()
     }
   }
@@ -63,8 +62,7 @@ object JDBCUtil {
 
       // Execute Query
       statement.execute(sql)
-    }
-    finally {
+    } finally {
       if (statement != null) statement.close()
       if (connection != null) connection.close()
     }

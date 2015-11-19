@@ -319,6 +319,8 @@ abstract class RedisCacheManager extends CacheManager {
 
     val taskMap = Map[Int, FutureTask[JList[JMap[String, String]]]]()
     var index = 0
+    println("================[RedisCacheManager] keys.size:"+keys.size)
+println("================[RedisCacheManager].hgetall keys:"+keys.mkString(","))
     while (bytekeys.size > 0) {
       val qrytask = new QryHashall(bytekeys.take(miniBatch))
       val futuretask = new FutureTask[JList[JMap[String, String]]](qrytask)

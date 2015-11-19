@@ -117,7 +117,17 @@ object MainFrameManager extends Logging {
     val spark_home = MainFrameConf.systemProps.get("SPARK_HOME")
     val libs_dir = CommonConstant.appJarsDir
     var cmd = spark_home + "/bin/spark-submit "
-    val deploy_mode = " --deploy-mode cluster"
+    // modify by surq at 2015.10.21 start
+    // val deploy_mode = " --deploy-mode cluster"
+    val deploy_mode = " --deploy-mode client"
+      
+    // spark-submit files 参数追加
+    var files = ""
+    val files_conf = MainFrameConf.systemProps.getOption("files")
+    if (files_conf != None) {
+      files = " --files " + files_conf.get
+    }
+    // modify by surq at 2015.10.21 end
 
     val master = " --master " + MainFrameConf.systemProps.get("master")
     //    val jars = MainFrameConf.systemProps.get("jars")
@@ -142,7 +152,10 @@ object MainFrameManager extends Logging {
       if (MainFrameConf.systemProps.get("supervise", "false").eq("true"))
         supervise = " --supervise "
 
-      cmd += streamClass + master + deploy_mode + supervise + executor_memory + total_executor_cores + jars + " " + appJars + " " + tid
+      // modify by surq at 2015.10.22 start
+      // cmd += streamClass + master + deploy_mode + supervise + executor_memory + total_executor_cores + jars + " " + appJars + " " + tid
+      cmd += streamClass + master + deploy_mode + supervise + executor_memory + total_executor_cores + files + jars + " " + appJars + " " + tid
+      // modify by surq at 2015.10.22 end
     } else if (master.contains("yarn")) {
       val num_executors = " --num-executors " + conf.getNum_executors
       var queue = " --queue "
@@ -151,7 +164,10 @@ object MainFrameManager extends Logging {
       } else {
         queue += MainFrameConf.systemProps.get("queue")
       }
-      cmd += streamClass + master + deploy_mode + executor_memory + num_executors + queue + jars + " " + appJars + " " + tid
+      // modify by surq at 2015.10.22 start
+      //cmd += streamClass + master + deploy_mode + executor_memory + num_executors + queue + jars + " " + appJars + " " + tid
+      cmd += streamClass + master + deploy_mode + executor_memory + num_executors + queue + files + jars + " " + appJars + " " + tid
+      // modify by surq at 2015.10.22 end
     }
     logInfo("Executor submit shell : " + cmd)
     (tid, cmd)

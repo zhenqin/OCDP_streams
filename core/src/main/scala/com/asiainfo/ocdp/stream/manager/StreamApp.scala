@@ -28,10 +28,11 @@ object StreamApp extends Logging {
 
     //1 初始化 streamingContext
     val sparkConf = new SparkConf().setAppName(taskConf.getName)
-
-    sparkConf.setMaster("local[2]")
-    sparkConf.setAppName("local")
-
+    // modify by surq at 2015.10.21 start
+    // sparkConf.setMaster("local[2]")
+    // sparkConf.setAppName("local")
+    sparkConf.setAppName("OCDP_Streaming")
+    // modify by surq at 2015.10.21 end
 
     val sc = new SparkContext(sparkConf)
     val listener = new AppStatusUpdateListener(taskConf.getId)

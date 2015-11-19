@@ -1,13 +1,12 @@
 package com.asiainfo.ocdp.stream.event
 
-import com.asiainfo.ocdp.stream.config.{EventConf, MainFrameConf}
+import com.asiainfo.ocdp.stream.config.{ EventConf, MainFrameConf }
 import com.asiainfo.ocdp.stream.constant.EventConstant
 import com.asiainfo.ocdp.stream.service.EventServer
-import com.asiainfo.ocdp.stream.tools.{Json4sUtils, StreamWriterFactory}
+import com.asiainfo.ocdp.stream.tools.{ Json4sUtils, StreamWriterFactory }
 import org.apache.spark.sql.DataFrame
-
 import scala.collection.mutable.ArrayBuffer
-
+import org.apache.spark.rdd.RDD
 
 /**
  * Created by leo on 8/12/15.
@@ -24,9 +23,12 @@ class Event extends Serializable {
 
   def buildEvent(df: DataFrame, uniqKeys: String) {
 
-    val mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
+    var mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
+    if (conf.get("ext_fields", null) != null)
+      mix_sel_expr = mix_sel_expr ++ conf.get("ext_fields", null).split(",")
 
     var eventDF = df.filter(conf.filte_expr).selectExpr(mix_sel_expr: _*)
+    var jsonRDD: RDD[String] = null
 
     //    eventDF.persist()
 
@@ -35,10 +37,15 @@ class Event extends Serializable {
     }
 
     if (EventConstant.RealtimeTransmission != conf.interval) {
-      eventDF = checkEvent(eventDF, uniqKeys)
+      val tuple = checkEvent(eventDF, uniqKeys)
+      eventDF = tuple._1
+      jsonRDD = tuple._2
     }
 
     outputEvent(eventDF, uniqKeys)
+
+    if (jsonRDD != null)
+      jsonRDD.unpersist()
 
     //    eventDF.unpersist()
   }
@@ -47,51 +54,52 @@ class Event extends Serializable {
 
   def cacheEvent(eventDF: DataFrame, uniqKeys: String) {
     val jsonRDD = eventDF.toJSON
-    jsonRDD.mapPartitions({ iter => {
-      new Iterator[String] {
-        private[this] var currentPos: Int = -1
-        private[this] val batchArrayBuffer = new ArrayBuffer[(String, String, String)]()
+    jsonRDD.mapPartitions({ iter =>
+      {
+        new Iterator[String] {
+          private[this] var currentPos: Int = -1
+          private[this] val batchArrayBuffer = new ArrayBuffer[(String, String, String)]()
 
-        override def hasNext: Boolean = (currentPos != -1 && currentPos < batchArrayBuffer.length) || (iter.hasNext && batchNext())
+          override def hasNext: Boolean = (currentPos != -1 && currentPos < batchArrayBuffer.length) || (iter.hasNext && batchNext())
 
-        override def next(): String = {
-          currentPos += 1
-          batchArrayBuffer(currentPos - 1)._3
-        }
-
-        //批量处理
-        def batchNext(): Boolean = {
-          currentPos = -1
-          var batchSize = 0
-          var result = false
-
-          batchArrayBuffer.clear()
-
-          //获取一个批次处理的row
-          while (iter.hasNext && (batchSize < batchLimit)) {
-            val jsonValue = iter.next()
-            val current = Json4sUtils.jsonStr2Map(jsonValue)
-            val eventKeyValue = uniqKeys.split(":").map(current(_)).mkString(":")
-            batchArrayBuffer.append((EventConstant.EVENT_CACHE_PREFIX_NAME + eventKeyValue,
-              EventConstant.EVENTCACHE_FIELD_ROWEVENTID_PREFIX_KEY + conf.id, jsonValue))
-
-            batchSize += 1
+          override def next(): String = {
+            currentPos += 1
+            batchArrayBuffer(currentPos - 1)._3
           }
 
-          //构建一个保存线程，提交一个批次的数据
-          if (batchArrayBuffer.length > 0) {
-            result = true
-            currentPos = 0
-            eventServer.cacheEventData(batchArrayBuffer.toArray)
+          //批量处理
+          def batchNext(): Boolean = {
+            currentPos = -1
+            var batchSize = 0
+            var result = false
+
+            batchArrayBuffer.clear()
+
+            //获取一个批次处理的row
+            while (iter.hasNext && (batchSize < batchLimit)) {
+              val jsonValue = iter.next()
+              val current = Json4sUtils.jsonStr2Map(jsonValue)
+              val eventKeyValue = uniqKeys.split(":").map(current(_)).mkString(":")
+              batchArrayBuffer.append((EventConstant.EVENT_CACHE_PREFIX_NAME + eventKeyValue,
+                EventConstant.EVENTCACHE_FIELD_ROWEVENTID_PREFIX_KEY + conf.id, jsonValue))
+
+              batchSize += 1
+            }
+
+            //构建一个保存线程，提交一个批次的数据
+            if (batchArrayBuffer.length > 0) {
+              result = true
+              currentPos = 0
+              eventServer.cacheEventData(batchArrayBuffer.toArray)
+            }
+            result
           }
-          result
         }
       }
-    }
     }).count()
   }
 
-  def checkEvent(eventDF: DataFrame, uniqKeys: String): DataFrame = {
+  def checkEvent(eventDF: DataFrame, uniqKeys: String): (DataFrame, RDD[String]) = {
     var jsonRDD = eventDF.toJSON
     jsonRDD = jsonRDD.mapPartitions(iter => {
       new Iterator[String] {
@@ -157,11 +165,10 @@ class Event extends Serializable {
 
         }
       }
-    }
-    )
+    })
 
     jsonRDD.persist()
-    eventDF.sqlContext.read.json(jsonRDD)
+    (eventDF.sqlContext.read.json(jsonRDD), jsonRDD)
   }
 
   def outputEvent(eventDF: DataFrame, uniqKeys: String) {
