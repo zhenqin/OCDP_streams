@@ -24,5 +24,6 @@ object CommonConstant {
   val log4jConfFile = new File(baseDir, "../conf/log4j.properties").getCanonicalPath
   val appLogFile = new File(baseDir, "../logs/Stream_APP").getCanonicalPath
   val appJarsDir = new File(baseDir).getCanonicalPath
+  val KafakPartitionOffsetFile = new File(baseDir, "../conf/offset.xml").getCanonicalPath()
   // modify by surq at 2015.10.22 end
 }
