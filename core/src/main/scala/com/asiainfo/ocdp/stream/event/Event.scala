@@ -22,8 +22,10 @@ class Event extends Serializable {
   val eventServer = new EventServer()
 
   def buildEvent(df: DataFrame, uniqKeys: String) {
-
-    var mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
+    // modifed by surq at 2015.11.24 start
+	//var mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
+    var mix_sel_expr = conf.select_expr.split(",")
+    // modifed by surq at 2015.11.24 end
     if (conf.get("ext_fields", null) != null)
       mix_sel_expr = mix_sel_expr ++ conf.get("ext_fields", null).split(",")
 

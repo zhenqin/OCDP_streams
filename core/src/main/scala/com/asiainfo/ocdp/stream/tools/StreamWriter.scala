@@ -21,8 +21,14 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
   def push(df: DataFrame, conf: EventConf, uniqKeys: String) {
     val jsonRDD = df.toJSON
     val topic = diConf.get("topic")
+    var fildList = conf.select_expr.split(",")
+    // add by surq at 2015.11.21 start 
+    if (conf.get("ext_fields", null) != null && conf.get("ext_fields") != "") {
+       val fields = conf.get("ext_fields").split(",").map(ext => (ext.split("as"))(1).trim)
+       fildList = fildList ++fields
+    }
+    // add by surq at 2015.11.21 end   
 
-    val fildList = conf.select_expr.split(",")
     val delim = conf.delim
     val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys)
     // modify by surq at 2015.11.03 start
@@ -46,7 +52,12 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
         {
           val key = line._1
           val msg_json = line._2
-          val msg = Json4sUtils.jsonStr2String(msg_json, fildList,delim)
+          println("surq=============msg_json:"+msg_json)
+          println("surq=============fildList start:") 
+          fildList foreach println
+          println("surq=============fildList end:") 
+          val msg = Json4sUtils.jsonStr2String(msg_json, fildList, delim)
+            println("surq=============msg:" +msg ) 
           val messages = ArrayBuffer[KeyedMessage[String, String]]()
           if (key == null) {
             messages.append(new KeyedMessage[String, String](topic, msg))
