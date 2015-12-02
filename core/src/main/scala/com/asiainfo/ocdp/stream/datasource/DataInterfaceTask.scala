@@ -29,12 +29,12 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     conf.setInterval(interval)
   // 原始信令字段个数
   val baseItemSize = conf.getBaseItemsSize
-  // 所有业务要输出的字段合集
-  val select_allEvent_items = events.map(event =>event.conf.getSelect_expr)
-  // 输出的主键字段
-  val uniqkeys = conf.get("uniqKeys").split(":")
-    // 所有业务要输出的字段合集＋主键字段
-  val select_items = (select_allEvent_items ++ uniqkeys).toSet
+//  // 所有业务要输出的字段合集
+//  val select_allEvent_items = events.map(event =>event.conf.getSelect_expr)
+//  // 输出的主键字段
+//  val uniqkeys = conf.get("uniqKeys").split(":")
+//    // 所有业务要输出的字段合集＋主键字段
+//  val select_items = (select_allEvent_items ++ uniqkeys).toSet
 
   protected def transform(source: String, schema: StructType): Option[Row] = {
     val delim = conf.get("delim", ",")
@@ -64,13 +64,15 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
         val df: DataFrame = sqlc.createDataFrame(rowRDD, schema)
         // modified by surq at 2015.11.11 start
         val filter_expr = conf.get("filter_expr").trim()
-        val mixDF= if (filter_expr != "") df.selectExpr(select_items.toArray: _*).filter(filter_expr)
+        val mixDF= if (filter_expr != "") df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
 //         if (filter_expr != "") mixDF = df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
         else df.selectExpr(allItemsSchema.fieldNames: _*)
         // deleted by surq at 2015.11.11
         // val mixDF = df.filter(conf.get("filter_expr", "1=1")).selectExpr(udfSchema.fieldNames: _*)
         // modified by surq at 2015.11.11 end
         // add by surq at 2015.11.09 start
+        
+      //--------------surq start U------------------  
         mixDF.persist()
         if (mixDF.count > 0) {
           val enDF = execLabels(mixDF)
@@ -81,6 +83,15 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
           enhancedDF.unpersist()
         }
         mixDF.unpersist()
+        
+//          val enDF = execLabels(mixDF)
+//          val enhancedDF = enDF._1
+//          val cacheRDD = enDF._2
+//          enhancedDF.persist()
+//          makeEvents(enhancedDF, conf.get("uniqKeys"))
+//          enhancedDF.unpersist()
+      //--------------surq start U------------------         
+        
         // add by surq at 2015.11.09 end
         // deleted by surq at 2015.11.09 start
         //          df.persist()
@@ -151,7 +162,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
             val currentLine = Json4sUtils.jsonStr2Map(iter.next())
             totaldata += currentLine
 
-            val uk = conf.get("uniqKeys").split(",").map(currentLine(_)).mkString(",")
+            val uk = conf.get("uniqKeys").split(":").map(currentLine(_)).mkString(",")
 
             minimap += ("Label:" + uk -> currentLine)
 
@@ -167,6 +178,16 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
             result = true
           }
 
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
           println(" partition data size = " + totalFetch)
 
           val f1 = System.currentTimeMillis()
