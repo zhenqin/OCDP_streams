@@ -24,7 +24,10 @@ class Event extends Serializable {
   def buildEvent(df: DataFrame, uniqKeys: String) {
     // modifed by surq at 2015.11.24 start
 	//var mix_sel_expr = uniqKeys.split(":") ++ conf.select_expr.split(",")
+    val keys = uniqKeys.split(":")
     var mix_sel_expr = conf.select_expr.split(",")
+    keys.map(key => mix_sel_expr = if (!mix_sel_expr.contains(key)) mix_sel_expr :+ key else mix_sel_expr)
+    
     // modifed by surq at 2015.11.24 end
     if (conf.get("ext_fields", null) != null)
       mix_sel_expr = mix_sel_expr ++ conf.get("ext_fields", null).split(",")

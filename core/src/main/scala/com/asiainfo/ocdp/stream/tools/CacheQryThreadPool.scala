@@ -8,6 +8,8 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 
 /**
@@ -15,8 +17,8 @@ import scala.collection.mutable.Map
  */
 object CacheQryThreadPool {
   // 初始化线程池
-  //  val threadPool: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
-  val threadPool = ThreadUtils.newDaemonCachedThreadPool("CacheQryDaemonCachedThreadPool", MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
+    val threadPool: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
+//  val threadPool = ThreadUtils.newDaemonCachedThreadPool("CacheQryDaemonCachedThreadPool", MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
 
   val DEFAULT_CHARACTER_SET = "UTF-8"
 }
@@ -30,11 +32,8 @@ class Qry(keys: Seq[Array[Byte]]) extends Callable[JList[Array[Byte]]] {
     try {
       val pgl = conn.pipelined()
       keys.foreach(x => pgl.get(x))
-      println("================surq qry pgl pip ok! keys.size:"+keys.size)
       val result_pgl = pgl.syncAndReturnAll()
-      println("================surq qry syncAndReturnAll ok!")
      result= result_pgl.asInstanceOf[JList[Array[Byte]]]
-       println("================surq qry result "+result.size())
     } catch {
       case ex: Exception =>
        ex.printStackTrace()
@@ -78,18 +77,10 @@ class QryHashall(keys: Seq[String]) extends Callable[JList[JMap[String, String]]
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
     var result: JList[JMap[String, String]] = null
     try {
-      println("================[CacheQryThreadPool].QryHashall keys.size:"+keys.size)
-      println("================[CacheQryThreadPool].QryHashall keys List:"+keys.mkString(","))
-      //    val conn = getConnection
       val pgl = conn.pipelined()
       keys.foreach(x => pgl.hgetAll(x))
-      println("================[CacheQryThreadPool].QryHashall pipelined ok!")
       val result_tmp = pgl.syncAndReturnAll()
-         println("================[CacheQryThreadPool].QryHashall syncAndReturnAll ok!")
        result =result_tmp.asInstanceOf[JList[JMap[String, String]]]
-      println("================[CacheQryThreadPool].QryHashall asInstanceOf ok!")
-      //      conn.close()
-      //      result
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in QryHashall.call()")

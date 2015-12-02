@@ -13,7 +13,7 @@ class DataInterfaceConf extends BaseConf {
   @BeanProperty var diType: Int = 0
   @BeanProperty var dsConf: DataSourceConf = null
   @BeanProperty var baseSchema: StructType = null
-  @BeanProperty var UDFSchema: StructType = null
-
+  @BeanProperty var allItemsSchema: StructType = null
+@BeanProperty var baseItemsSize: Int = 0
   @BeanProperty var interval: Int = 1
 }

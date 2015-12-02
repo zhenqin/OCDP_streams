@@ -52,12 +52,7 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
         {
           val key = line._1
           val msg_json = line._2
-          println("surq=============msg_json:"+msg_json)
-          println("surq=============fildList start:") 
-          fildList foreach println
-          println("surq=============fildList end:") 
           val msg = Json4sUtils.jsonStr2String(msg_json, fildList, delim)
-            println("surq=============msg:" +msg ) 
           val messages = ArrayBuffer[KeyedMessage[String, String]]()
           if (key == null) {
             messages.append(new KeyedMessage[String, String](topic, msg))

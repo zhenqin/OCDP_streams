@@ -23,18 +23,25 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
   val dataInterfaceService = new DataInterfaceServer
 
   val conf = dataInterfaceService.getDataInterfaceInfoById(id)
-  conf.setInterval(interval)
-
   val labels = dataInterfaceService.getLabelsByIFId(id)
-
   val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
+  
+    conf.setInterval(interval)
+  // 原始信令字段个数
+  val baseItemSize = conf.getBaseItemsSize
+  // 所有业务要输出的字段合集
+  val select_allEvent_items = events.map(event =>event.conf.getSelect_expr)
+  // 输出的主键字段
+  val uniqkeys = conf.get("uniqKeys").split(":")
+    // 所有业务要输出的字段合集＋主键字段
+  val select_items = (select_allEvent_items ++ uniqkeys).toSet
 
   protected def transform(source: String, schema: StructType): Option[Row] = {
     val delim = conf.get("delim", ",")
     val inputArr = (source + delim + "DummySplitHolder").split(delim).dropRight(1).toSeq
-    Some(Row.fromSeq(inputArr))
+    if (inputArr.size != baseItemSize) None else Some(Row.fromSeq(inputArr))
   }
-
+  //  val kv = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "fields")
   final def process(ssc: StreamingContext) = {
     //    this.ssc = ssc
     val sqlc = new SQLContext(ssc.sparkContext)
@@ -46,25 +53,20 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 
     //1.2 根据输入数据接口配置，生成构造 sparkSQL DataFrame 的 structType
     val schema = conf.getBaseSchema
-    val udfSchema = conf.getUDFSchema
-
+    // 全量字段: baseItems + udfItems 
+    val allItemsSchema = conf.getAllItemsSchema
     //2 流数据处理
     inputStream.foreachRDD(rdd => {
-      if (rdd.partitions.length > 0) {
         //2.1 流数据转换
-
-        val rowRDD = rdd.map(inputArr => {
-          transform(inputArr, schema)
-        }).collect {
-          case Some(row) => row
-        }
-
+        val rowRDD = rdd.map(inputArr => transform(inputArr, schema)).collect{case Some(row) => row}
+        if (rowRDD.partitions.size >0){
+  
         val df: DataFrame = sqlc.createDataFrame(rowRDD, schema)
         // modified by surq at 2015.11.11 start
-        var mixDF: DataFrame = null
         val filter_expr = conf.get("filter_expr").trim()
-        if (filter_expr != "") mixDF = df.selectExpr(udfSchema.fieldNames: _*).filter(filter_expr)
-        else mixDF = df.selectExpr(udfSchema.fieldNames: _*)
+        val mixDF= if (filter_expr != "") df.selectExpr(select_items.toArray: _*).filter(filter_expr)
+//         if (filter_expr != "") mixDF = df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
+        else df.selectExpr(allItemsSchema.fieldNames: _*)
         // deleted by surq at 2015.11.11
         // val mixDF = df.filter(conf.get("filter_expr", "1=1")).selectExpr(udfSchema.fieldNames: _*)
         // modified by surq at 2015.11.11 end
@@ -94,25 +96,20 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     })
   }
 
+  /**
+   * 自定义slq 方法注册
+   */
   def registFunction(sqlc: SQLContext) {
     sqlc.udf.register("Conv", (data: String) => {
-      var lc = Integer.toHexString(data.toInt).toUpperCase
-      while (lc.length < 4) {
-        lc = "0" + lc
-      }
-      lc
+      val lc = Integer.toHexString(data.toInt).toUpperCase
+      if (lc.length < 4) { val concatStr = "0000" + lc; concatStr.substring(concatStr.length - 4) } else lc
     })
 
     sqlc.udf.register("concat", (firststr: String, secondstr: String) => firststr + secondstr)
-
-    sqlc.udf.register("from_unixtime", (date: String, format: String) => {
-      val df = new SimpleDateFormat(format);
-      df.parse(date).toString();
-    })
-
+    sqlc.udf.register("from_unixtime", (date: String, format: String) => (new SimpleDateFormat(format)).parse(date).toString())
     sqlc.udf.register("unix_timestamp", () => System.currentTimeMillis().toString)
     sqlc.udf.register("currenttimesub", (subduction: Int) => (System.currentTimeMillis - subduction).toString)
-    sqlc.udf.register("currenttimeadd", (add: Int) => (System.currentTimeMillis + add) .toString)
+    sqlc.udf.register("currenttimeadd", (add: Int) => (System.currentTimeMillis + add).toString)
   }
 
   final def readSource(ssc: StreamingContext): DStream[String] = {

@@ -38,8 +38,8 @@ class DataInterfaceServer extends Logging with Serializable {
 
       val propsJsonStr = interface.get("properties").getOrElse(null)
       conf.setBaseSchema(Json4sUtils.jsonStr2BaseStructType(propsJsonStr, "fields"))
-
-      conf.setUDFSchema(Json4sUtils.jsonStr2UdfStructType(propsJsonStr, "fields", "userFields"))
+      conf.setBaseItemsSize((Json4sUtils.jsonStr2ArrMap(propsJsonStr, "fields")).size)
+      conf.setAllItemsSchema(Json4sUtils.jsonStr2UdfStructType(propsJsonStr, "fields", "userFields"))
 
       val propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "props")
       propsMap.foreach(kvMap => {
@@ -135,9 +135,7 @@ class DataInterfaceServer extends Logging with Serializable {
 
       //
       val propsMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "props")
-      propsMap.foreach(kvMap => {
-        if (!kvMap.isEmpty) conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get)
-      })
+      propsMap.foreach(kvMap => conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get))
 
       // 业务对应的输出数据接口配置，每个业务一个输出事件接口
       val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
