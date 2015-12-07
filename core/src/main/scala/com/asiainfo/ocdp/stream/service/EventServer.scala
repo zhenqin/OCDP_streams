@@ -94,7 +94,7 @@ class EventServer extends Logging with Serializable {
           multimap.put(rowKey, Map[String, String]())
         }
         fieldValueMap.map { case (field, value) =>
-          println("field = " + field + ", value is null or not =" + (value == null))
+//          println("field = " + field + ", value is null or not =" + (value == null))
           multimap.get(rowKey).get.put(field, value)
         }
       }

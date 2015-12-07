@@ -18,6 +18,7 @@ import java.util.concurrent.Executors
 object CacheQryThreadPool {
   // 初始化线程池
     val threadPool: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
+//    val threadPool: ExecutorService = Executors.newCachedThreadPool()
 //  val threadPool = ThreadUtils.newDaemonCachedThreadPool("CacheQryDaemonCachedThreadPool", MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
 
   val DEFAULT_CHARACTER_SET = "UTF-8"
@@ -58,8 +59,8 @@ class Insert(value: Map[String, Any]) extends Callable[String] {
       while (ite.hasNext) {
         val elem = ite.next()
         pgl.set(elem._1.getBytes, kryotool.serialize(elem._2).array())
-        pgl.sync()
       }
+      pgl.sync()
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in Insert.call()")
@@ -104,8 +105,8 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
       while (ite.hasNext) {
         val elem = ite.next()
         pgl.hmset(elem._1, elem._2.asJava)
-        pgl.sync()
       }
+      pgl.sync()
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in InsertHash.call()")

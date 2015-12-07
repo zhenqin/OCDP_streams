@@ -25,16 +25,16 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
   val conf = dataInterfaceService.getDataInterfaceInfoById(id)
   val labels = dataInterfaceService.getLabelsByIFId(id)
   val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
-  
-    conf.setInterval(interval)
+
+  conf.setInterval(interval)
   // 原始信令字段个数
   val baseItemSize = conf.getBaseItemsSize
-//  // 所有业务要输出的字段合集
-//  val select_allEvent_items = events.map(event =>event.conf.getSelect_expr)
-//  // 输出的主键字段
-//  val uniqkeys = conf.get("uniqKeys").split(":")
-//    // 所有业务要输出的字段合集＋主键字段
-//  val select_items = (select_allEvent_items ++ uniqkeys).toSet
+  //  // 所有业务要输出的字段合集
+  //  val select_allEvent_items = events.map(event =>event.conf.getSelect_expr)
+  //  // 输出的主键字段
+  //  val uniqkeys = conf.get("uniqKeys").split(":")
+  //    // 所有业务要输出的字段合集＋主键字段
+  //  val select_items = (select_allEvent_items ++ uniqkeys).toSet
 
   protected def transform(source: String, schema: StructType): Option[Row] = {
     val delim = conf.get("delim", ",")
@@ -57,41 +57,40 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     val allItemsSchema = conf.getAllItemsSchema
     //2 流数据处理
     inputStream.foreachRDD(rdd => {
-        //2.1 流数据转换
-        val rowRDD = rdd.map(inputArr => transform(inputArr, schema)).collect{case Some(row) => row}
-        if (rowRDD.partitions.size >0){
-  
+      //2.1 流数据转换
+      val rowRDD = rdd.map(inputArr => transform(inputArr, schema)).collect { case Some(row) => row }
+      if (rowRDD.partitions.size > 0) {
+
         val df: DataFrame = sqlc.createDataFrame(rowRDD, schema)
         // modified by surq at 2015.11.11 start
         val filter_expr = conf.get("filter_expr").trim()
-        val mixDF= if (filter_expr != "") df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
-//         if (filter_expr != "") mixDF = df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
+        
+        val mixDF = if (filter_expr != "") df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
+        //         if (filter_expr != "") mixDF = df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
         else df.selectExpr(allItemsSchema.fieldNames: _*)
         // deleted by surq at 2015.11.11
         // val mixDF = df.filter(conf.get("filter_expr", "1=1")).selectExpr(udfSchema.fieldNames: _*)
         // modified by surq at 2015.11.11 end
         // add by surq at 2015.11.09 start
-        
-      //--------------surq start U------------------  
-        mixDF.persist()
-        if (mixDF.count > 0) {
-          val enDF = execLabels(mixDF)
-          val enhancedDF = enDF._1
-          val cacheRDD = enDF._2
-          enhancedDF.persist()
-          makeEvents(enhancedDF, conf.get("uniqKeys"))
-          enhancedDF.unpersist()
-        }
-        mixDF.unpersist()
-        
-//          val enDF = execLabels(mixDF)
-//          val enhancedDF = enDF._1
-//          val cacheRDD = enDF._2
-//          enhancedDF.persist()
-//          makeEvents(enhancedDF, conf.get("uniqKeys"))
-//          enhancedDF.unpersist()
-      //--------------surq start U------------------         
-        
+
+        //--------------surq start U------------------  
+        //        mixDF.persist()
+        //        if (mixDF.count > 0) {
+        //          val enDF = execLabels(mixDF)
+        //          val enhancedDF = enDF._1
+        //          val cacheRDD = enDF._2
+        //          enhancedDF.persist()
+        //          makeEvents(enhancedDF, conf.get("uniqKeys"))
+        //          enhancedDF.unpersist()
+        //        }
+        //        mixDF.unpersist()
+
+        val enDF = execLabels(mixDF)
+        val enhancedDF = df.sqlContext.read.json(enDF)
+        makeEvents(enhancedDF, conf.get("uniqKeys"))
+
+        //--------------surq start U------------------         
+
         // add by surq at 2015.11.09 end
         // deleted by surq at 2015.11.09 start
         //          df.persist()
@@ -126,141 +125,209 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
   final def readSource(ssc: StreamingContext): DStream[String] = {
     StreamingInputReader.readSource(ssc, conf)
   }
-
-  def execLabels(df: DataFrame): (DataFrame, RDD[String]) = {
-    println(" Begin exec labes : " + System.currentTimeMillis())
+  def execLabels(df: DataFrame): (RDD[String]) = {
+    //  def execLabels(df: DataFrame): (DataFrame, RDD[String]) = {
 
     val jsonRDD = df.toJSON
-
-    val batchLimit = MainFrameConf.systemProps.getInt("cacheQryBatchSizeLimit")
-
+    //    val batchLimit = MainFrameConf.systemProps.getInt("cacheQryBatchSizeLimit")
+    //
+    //    val enhancedJsonRDD = jsonRDD.mapPartitions(iter => {
+    //      new Iterator[String] {
+    //        private[this] var currentPos: Int = -1
+    //        private[this] var arrayBuffer: Array[String] = _
+    //
+    //        override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
+    //
+    //        override def next(): String = {
+    //          currentPos += 1
+    //          arrayBuffer(currentPos - 1)
+    //        }
+    //
+    //        private final def fetchNext(): Boolean = {
+    //          val currentArrayBuffer = new ArrayBuffer[String]
+    //          currentPos = -1
+    //          var totalFetch = 0
+    //          var result = false
+    //
+    //          val totaldata = mutable.MutableList[Map[String, String]]()
+    //          val minimap = mutable.Map[String, Map[String, String]]()
+    //
+    //          val labelQryKeysSet = mutable.Set[String]()
+    //
+    //          while (iter.hasNext && (totalFetch < batchLimit)) {
+    //            //            println(iter.next())
+    //            val currentLine = Json4sUtils.jsonStr2Map(iter.next())
+    //            totaldata += currentLine
+    //
+    //            val uk = conf.get("uniqKeys").split(":").map(currentLine(_)).mkString(",")
+    //
+    //            minimap += ("Label:" + uk -> currentLine)
+    //
+    //            labels.foreach(label => {
+    //              val qryKeys = label.getQryKeys(currentLine)
+    //              if (qryKeys != null && qryKeys.nonEmpty) {
+    //                labelQryKeysSet ++= qryKeys
+    //              }
+    //            })
+    //
+    //            totalFetch += 1
+    //            currentPos = 0
+    //            result = true
+    //          }
+    //          println(" partition data size = " + totalFetch)
+    //
+    //          val f1 = System.currentTimeMillis()
+    //          var cachemap_old: Map[String, Any] = null
+    //          try {
+    //            cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList).toMap
+    //          } catch {
+    //            case ex: Exception =>
+    //              logError("= = " * 15 + " got exception in EventSource while get cache")
+    //              throw ex
+    //          }
+    //
+    //          val f2 = System.currentTimeMillis()
+    //          println(" query label cache data cost time : " + (f2 - f1) + " millis ! ")
+    //
+    //          val labelQryData = CacheFactory.getManager.hgetall(labelQryKeysSet.toList)
+    //
+    //          val f3 = System.currentTimeMillis()
+    //          println(" query label need data cost time : " + (f3 - f2) + " millis ! ")
+    //
+    //          val cachemap_new = mutable.Map[String, Any]()
+    //          totaldata.foreach(x => {
+    //            val uk = conf.get("uniqKeys").split(",").map(x(_)).mkString(",")
+    //
+    //            val key = "Label:" + uk
+    //            var value = x
+    //
+    //            var rule_caches = cachemap_old.get(key).get match {
+    //              case cache: immutable.Map[String, StreamingCache] => cache
+    //              case null =>
+    //                val cachemap = mutable.Map[String, StreamingCache]()
+    //                labels.foreach(label => {
+    //                  cachemap += (label.conf.getId -> null)
+    //                })
+    //                cachemap.toMap
+    //            }
+    //
+    //            labels.foreach(label => {
+    //              val cacheOpt = rule_caches.get(label.conf.getId)
+    //              var old_cache: StreamingCache = null
+    //              if (cacheOpt != None) old_cache = cacheOpt.get
+    //
+    //              val resultTuple = label.attachLabel(value, old_cache, labelQryData)
+    //              value = resultTuple._1
+    //              val newcache = resultTuple._2
+    //              rule_caches = rule_caches.updated(label.conf.getId, newcache)
+    //            })
+    //            currentArrayBuffer.append(Json4sUtils.map2JsonStr(value))
+    //
+    //            cachemap_new += (key -> rule_caches.asInstanceOf[Any])
+    //          })
+    //
+    //          val f4 = System.currentTimeMillis()
+    //          println(" Exec labels cost time : " + (f4 - f3) + " millis ! ")
+    //
+    //          //update caches to CacheManager
+    //          CacheFactory.getManager.setMultiCache(cachemap_new)
+    //          println(" update labels cache cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
+    //
+    //          arrayBuffer = currentArrayBuffer.toArray
+    //          result
+    //        }
+    //      }
+    //    })
+    ///////////////////////////modify by surq at 2015.12.2 start////////////////////////////////////////////
     val enhancedJsonRDD = jsonRDD.mapPartitions(iter => {
-      new Iterator[String] {
-        private[this] var currentPos: Int = -1
-        private[this] var arrayBuffer: Array[String] = _
-
-        override def hasNext: Boolean = (currentPos != -1 && currentPos < arrayBuffer.length) || (iter.hasNext && fetchNext())
-
-        override def next(): String = {
-          currentPos += 1
-          arrayBuffer(currentPos - 1)
-        }
-
-        private final def fetchNext(): Boolean = {
-          val currentArrayBuffer = new ArrayBuffer[String]
-          currentPos = -1
-          var totalFetch = 0
-          var result = false
-
-          val totaldata = mutable.MutableList[Map[String, String]]()
-          val minimap = mutable.Map[String, Map[String, String]]()
-
-          val labelQryKeysSet = mutable.Set[String]()
-
-          while (iter.hasNext && (totalFetch < batchLimit)) {
-            //            println(iter.next())
-            val currentLine = Json4sUtils.jsonStr2Map(iter.next())
-            totaldata += currentLine
-
-            val uk = conf.get("uniqKeys").split(":").map(currentLine(_)).mkString(",")
-
-            minimap += ("Label:" + uk -> currentLine)
-
-            labels.foreach(label => {
-              val qryKeys = label.getQryKeys(currentLine)
-              if (qryKeys != null && qryKeys.nonEmpty) {
-                labelQryKeysSet ++= qryKeys
-              }
-            })
-
-            totalFetch += 1
-            currentPos = 0
-            result = true
-          }
-
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          println(" partition data size = " + totalFetch)
-
-          val f1 = System.currentTimeMillis()
-          var cachemap_old: Map[String, Any] = null
-          try {
-            cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(minimap.keys.toList).toMap
-          } catch {
-            case ex: Exception =>
-              logError("= = " * 15 + " got exception in EventSource while get cache")
-              throw ex
-          }
-
-          val f2 = System.currentTimeMillis()
-          println(" query label cache data cost time : " + (f2 - f1) + " millis ! ")
-
-          val labelQryData = CacheFactory.getManager.hgetall(labelQryKeysSet.toList)
-
-          val f3 = System.currentTimeMillis()
-          println(" query label need data cost time : " + (f3 - f2) + " millis ! ")
-
-          val cachemap_new = mutable.Map[String, Any]()
-          totaldata.foreach(x => {
-            val uk = conf.get("uniqKeys").split(",").map(x(_)).mkString(",")
-
-            val key = "Label:" + uk
-            var value = x
-
-            var rule_caches = cachemap_old.get(key).get match {
-              case cache: immutable.Map[String, StreamingCache] => cache
-              case null =>
-                val cachemap = mutable.Map[String, StreamingCache]()
-                labels.foreach(label => {
-                  cachemap += (label.conf.getId -> null)
-                })
-                cachemap.toMap
-            }
-
-            labels.foreach(label => {
-              val cacheOpt = rule_caches.get(label.conf.getId)
-              var old_cache: StreamingCache = null
-              if (cacheOpt != None) old_cache = cacheOpt.get
-
-              val resultTuple = label.attachLabel(value, old_cache, labelQryData)
-              value = resultTuple._1
-              val newcache = resultTuple._2
-              rule_caches = rule_caches.updated(label.conf.getId, newcache)
-            })
-            currentArrayBuffer.append(Json4sUtils.map2JsonStr(value))
-
-            cachemap_new += (key -> rule_caches.asInstanceOf[Any])
-          })
-
-          val f4 = System.currentTimeMillis()
-          println(" Exec labels cost time : " + (f4 - f3) + " millis ! ")
-
-          //update caches to CacheManager
-          CacheFactory.getManager.setMultiCache(cachemap_new)
-          println(" update labels cache cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
-
-          arrayBuffer = currentArrayBuffer.toArray
-          result
-        }
+      // 装载整个批次事件计算中间结果缓存值　label:uk -> 每条信令用map装载
+      val busnessKeyList = mutable.Map[String, Map[String, String]]()
+      // 装载整个批次打标签操作时，所需要的跟codis数据库交互的key
+      val labelQryKeysSet = mutable.Set[String]()
+      val cachemap_new = mutable.Map[String, Any]()
+      val ukUnion = conf.get("uniqKeys").split(":")
+      iter.toList.map(jsonStr => {
+        val currentLine = Json4sUtils.jsonStr2Map(jsonStr)
+        val uk = ukUnion.map(currentLine(_)).mkString(",")
+        busnessKeyList += ("Label:" + uk -> currentLine)
+        // 取出本条数据在打所有标签时所用的查询cache用到的key放入labelQryKeysSet
+        labels.foreach(label => {
+          val qryKeys = label.getQryKeys(currentLine)
+          if (qryKeys != null && qryKeys.nonEmpty) labelQryKeysSet ++= qryKeys
+        })
+      })
+      // cachemap_old
+      val f1 = System.currentTimeMillis()
+      var cachemap_old: Map[String, Any] = null
+      val keyList = busnessKeyList.keys.toList
+      val batchSize = keyList.size
+      println("本批次记录条数：" + batchSize)
+      try {
+        cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(keyList).toMap
+      } catch {
+        case ex: Exception =>
+          logError("= = " * 15 + " got exception in EventSource while get cache")
+          throw ex
       }
-    })
+      val f2 = System.currentTimeMillis()
+      println(" 1. 查取一批数据缓存中的交互状态信息 cost time : " + (f2 - f1) + " millis ! ")
+      val labelQryData = CacheFactory.getManager.hgetall(labelQryKeysSet.toList)
+      val f3 = System.currentTimeMillis()
+      println(" 2. 查取此批数据缓存中的用户相关信息表 cost time : " + (f3 - f2) + " millis ! ")
 
-    enhancedJsonRDD.persist()
-    (df.sqlContext.read.json(enhancedJsonRDD), enhancedJsonRDD)
+      // 遍历整个批次的数据，逐条记录打标签
+      val jsonList = busnessKeyList.map(enum => {
+        // 格式 【"Label:" + uk】
+        val key = enum._1
+        var value = enum._2
+        // 从cache中取出本条记录的中间计算结果值
+        var rule_caches = cachemap_old.get(key).get match {
+          case cache: immutable.Map[String, StreamingCache] => cache
+          case null =>
+            val cachemap = mutable.Map[String, StreamingCache]()
+            labels.foreach(label => cachemap += (label.conf.getId -> null))
+            cachemap.toMap
+        }
+        // 遍历所有所打标签，从cache中取出本条记录对应本标签的中间缓存值，并打标签操作
+        labels.foreach(label => {
+          // 从cache中取出本条记录所关联的所有标签所用到的用户资料表［静态表］
+          val cacheOpt = rule_caches.get(label.conf.getId)
+          var old_cache: StreamingCache = null
+          if (cacheOpt != None) old_cache = cacheOpt.get
+          // 传入本记录、往期中间记算结果cache、相关的用户资料表，进行打标签操作
+          val resultTuple = label.attachLabel(value, old_cache, labelQryData)
+          // 增强记录信息，加标签字段
+          value = resultTuple._1
+          // 更新往期中间记算结果cache
+          val newcache = resultTuple._2
+          rule_caches = rule_caches.updated(label.conf.getId, newcache)
+        })
+        // 更新往期中间记算结果cache【"Label:" + uk-> {labelId->rule_caches}】
+        cachemap_new += (key -> rule_caches.asInstanceOf[Any])
+        Json4sUtils.map2JsonStr(value)
+      })
+
+      val f4 = System.currentTimeMillis()
+      println(" 3. 遍历一批次数据并打相关联的标签 cost time : " + (f4 - f3) + " millis ! ")
+      //update caches to CacheManager
+      CacheFactory.getManager.setMultiCache(cachemap_new)
+      println(" 4. 更新这批数据的缓存中的交互状态信息 cost time : " + (System.currentTimeMillis() - f4) + " millis ! ")
+
+      jsonList.iterator
+    })
+    ///////////////////////////modify by surq at 2015.12.2 end////////////////////////////////////////////
+
+    //    enhancedJsonRDD.persist()
+    //    val resultDF = (df.sqlContext.read.json(enhancedJsonRDD), enhancedJsonRDD)
+    //    enhancedJsonRDD.unpersist()
+    //    resultDF
+    enhancedJsonRDD
   }
 
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
     println(" Begin exec evets : " + System.currentTimeMillis())
-
+    df.persist
     events.map(event => event.buildEvent(df, uniqKeys))
-
+    df.unpersist
   }
 }
