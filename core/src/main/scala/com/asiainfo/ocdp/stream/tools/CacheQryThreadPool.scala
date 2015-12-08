@@ -1,7 +1,7 @@
 package com.asiainfo.ocdp.stream.tools
 
 import java.util.concurrent.Callable
-import java.util.{List => JList, Map => JMap}
+import java.util.{ List => JList, Map => JMap }
 import com.asiainfo.ocdp.stream.common.CodisCacheManager
 import com.asiainfo.ocdp.stream.config.MainFrameConf
 import org.slf4j.LoggerFactory
@@ -10,40 +10,45 @@ import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-
+import java.util.concurrent.ExecutorCompletionService
 
 /**
  * Created by tsingfu on 15/8/18.
  */
 object CacheQryThreadPool {
   // 初始化线程池
-    val threadPool: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
-//    val threadPool: ExecutorService = Executors.newCachedThreadPool()
-//  val threadPool = ThreadUtils.newDaemonCachedThreadPool("CacheQryDaemonCachedThreadPool", MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
+//        val threadPoCol: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
+  val threadPool: ExecutorService = Executors.newCachedThreadPool
+//  val completionService = new ExecutorCompletionService[Seq[(String, java.util.Map[String, String])]](threadPool)
+//  val completionQry = new ExecutorCompletionService[List[(String, Array[Byte])]](threadPool)
+
+  //  val threadPool = ThreadUtils.newDaemonCachedThreadPool("CacheQryDaemonCachedThreadPool", MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
 
   val DEFAULT_CHARACTER_SET = "UTF-8"
 }
 
-class Qry(keys: Seq[Array[Byte]]) extends Callable[JList[Array[Byte]]] {
+class Qry(keyList: List[String]) extends Callable[List[(String, Array[Byte])]] {
   val logger = LoggerFactory.getLogger(this.getClass)
-
   override def call() = {
+    val t1 = System.currentTimeMillis()
+    val keys = keyList.map(x => x.getBytes).toSeq
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
     var result: JList[Array[Byte]] = null
     try {
-      val pgl = conn.pipelined()
-      keys.foreach(x => pgl.get(x))
-      val result_pgl = pgl.syncAndReturnAll()
-     result= result_pgl.asInstanceOf[JList[Array[Byte]]]
+      val pipeline = conn.pipelined()
+      keys.foreach(key => pipeline.get(key))
+      val pipline_result = pipeline.syncAndReturnAll()
+      result = pipline_result.asInstanceOf[JList[Array[Byte]]]
     } catch {
       case ex: Exception =>
-       ex.printStackTrace()
-        logger.error("= = " * 15 + "found error in Qry.call()"+"surq:"+ex.getStackTraceString)
+        ex.printStackTrace()
+        logger.error("= = " * 15 + "found error in Qry.call()" + "surq:" + ex.getStackTraceString)
+        throw ex
     } finally {
       conn.close()
+//      println("Qry " + keyList.size + " key cost " + (System.currentTimeMillis() - t1) + " Millis")
     }
-
-    result
+    if (result != null) keyList.zip(result) else null
   }
 }
 
@@ -51,16 +56,20 @@ class Insert(value: Map[String, Any]) extends Callable[String] {
   val logger = LoggerFactory.getLogger(this.getClass)
 
   override def call() = {
+    val t1 = System.currentTimeMillis()
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
     try {
-      val pgl = conn.pipelined()
-      val ite = value.iterator
+      val pipeline = conn.pipelined()
+            val ite = value.iterator
       val kryotool = new KryoSerializerStreamAppTool
-      while (ite.hasNext) {
-        val elem = ite.next()
-        pgl.set(elem._1.getBytes, kryotool.serialize(elem._2).array())
-      }
-      pgl.sync()
+//      value.foreach(elem => pipeline.set(elem._1.getBytes, kryotool.serialize(elem._2).array()))
+            while (ite.hasNext) {
+              val elem = ite.next()
+              pipeline.set(elem._1.getBytes, kryotool.serialize(elem._2).array())
+//            pipeline.sync()
+            }
+      pipeline.sync()
+      println("Insert " + value.size + " key cost " + (System.currentTimeMillis() - t1) + " Millis")
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in Insert.call()")
@@ -71,25 +80,27 @@ class Insert(value: Map[String, Any]) extends Callable[String] {
   }
 }
 
-class QryHashall(keys: Seq[String]) extends Callable[JList[JMap[String, String]]] {
+class QryHashall(keys: Seq[String]) extends Callable[Seq[(String, java.util.Map[String, String])]] {
   val logger = LoggerFactory.getLogger(this.getClass)
 
   override def call() = {
+    val t1 = System.currentTimeMillis()
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
     var result: JList[JMap[String, String]] = null
     try {
       val pgl = conn.pipelined()
       keys.foreach(x => pgl.hgetAll(x))
       val result_tmp = pgl.syncAndReturnAll()
-       result =result_tmp.asInstanceOf[JList[JMap[String, String]]]
+      result = result_tmp.asInstanceOf[JList[JMap[String, String]]]
+//      println("QryHashall result.size:" + result.size)
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in QryHashall.call()")
     } finally {
       conn.close()
+//      println("QryHashall " + keys.size + " key cost " + (System.currentTimeMillis() - t1) + " Millis")
     }
-
-    result
+   if (result != null) keys.zip(result) else null
   }
 }
 
@@ -97,6 +108,7 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
   val logger = LoggerFactory.getLogger(this.getClass)
 
   override def call() = {
+    val t1 = System.currentTimeMillis()
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
 
     try {
@@ -106,18 +118,19 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
         val elem = ite.next()
         pgl.hmset(elem._1, elem._2.asJava)
       }
+      println("InsertHash " + value.size + " key cost " + (System.currentTimeMillis() - t1) + " Millis")
       pgl.sync()
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in InsertHash.call()")
     } finally {
       conn.close()
+
     }
 
     ""
   }
 }
-
 
 /**
  * 保存 Array[(Row_rowKey,(eventId, Row)] => Map[Row_rowKey, Map(eventId, Row)]
@@ -152,7 +165,6 @@ class InsertEventRows(value: Array[(String, String, String)]) extends Callable[S
   }
 }
 
-
 /**
  * 获取事件缓存
  * Array[(Row_rowKey, Array(eventId/businessEventId)]
@@ -175,14 +187,15 @@ class QryEventCache(value: Array[(String, Array[String])]) extends Callable[Map[
         val elem = ite.next() //结构：(Row_rowKey,Array(eventId))
         val rowKey = elem._1
         val fields = elem._2
-        pgl.hmget(rowKey.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET), fields.map(_.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET)): _ *)
+        pgl.hmget(rowKey.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET), fields.map(_.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET)): _*)
         result = pgl.syncAndReturnAll().head.asInstanceOf[JList[Array[Byte]]]
 
         if (!resultMap.contains(rowKey)) {
           resultMap.put(rowKey, Map[String, String]())
         }
-        fields.zip(result).foreach { case (k, v) =>
-          if (v != null) resultMap.get(rowKey).get.put(k, new String(v))
+        fields.zip(result).foreach {
+          case (k, v) =>
+            if (v != null) resultMap.get(rowKey).get.put(k, new String(v))
         }
       }
 
@@ -197,7 +210,6 @@ class QryEventCache(value: Array[(String, Array[String])]) extends Callable[Map[
     resultMap
   }
 }
-
 
 /**
  * 获取事件缓存
@@ -227,8 +239,9 @@ class QryAllEventCache(value: scala.collection.mutable.Set[String]) extends Call
         if (!resultMap.contains(rowKey)) {
           resultMap.put(rowKey, Map[String, Array[Byte]]())
         }
-        result.foreach { case (k, v) =>
-          resultMap.get(rowKey).get.put(new String(k, CacheQryThreadPool.DEFAULT_CHARACTER_SET), v)
+        result.foreach {
+          case (k, v) =>
+            resultMap.get(rowKey).get.put(new String(k, CacheQryThreadPool.DEFAULT_CHARACTER_SET), v)
         }
       }
 

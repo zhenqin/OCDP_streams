@@ -1,6 +1,7 @@
 package com.asiainfo.ocdp.stream.common
 
 import scala.collection.mutable.Map
+import java.util.concurrent.ExecutorCompletionService
 
 /**
  * Created by leo on 8/12/15.
@@ -30,11 +31,11 @@ trait CacheManager {
 
   def setMultiCache(keysvalues: Map[String, Any])
 
-  def getMultiCacheByKeys(keys: List[String]): Map[String, Any]
+  def getMultiCacheByKeys(keys: List[String],qryCacheService: ExecutorCompletionService[List[(String, Array[Byte])]]): Map[String, Any]
 
   def setCommonCacheValue(cacheName: String, key: String, value: String)
 
-  def hgetall(keys: List[String]): Map[String, Map[String, String]]
+  def hgetall(keys: List[String],hgetAllService: ExecutorCompletionService[Seq[(String,java.util.Map[String,String])]]): Map[String, Map[String, String]]
 
   def hmset(keyValues: Map[String, Map[String, String]])
 }

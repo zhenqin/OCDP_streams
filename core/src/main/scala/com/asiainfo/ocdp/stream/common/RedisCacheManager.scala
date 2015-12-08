@@ -2,17 +2,16 @@ package com.asiainfo.ocdp.stream.common
 
 import java.nio.ByteBuffer
 import java.util.concurrent.FutureTask
-import java.util.{ArrayList => JArrayList, List => JList, Map => JMap}
-
+import java.util.{ ArrayList => JArrayList, List => JList, Map => JMap }
 import com.asiainfo.ocdp.stream.config.MainFrameConf
 import com.asiainfo.ocdp.stream.constant.EventConstant
 import com.asiainfo.ocdp.stream.tools._
 import org.slf4j.LoggerFactory
 import redis.clients.jedis.Jedis
-
 import scala.collection.convert.wrapAsJava.mapAsJavaMap
 import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
+import java.util.concurrent.ExecutionException
 
 abstract class RedisCacheManager extends CacheManager {
 
@@ -25,7 +24,7 @@ abstract class RedisCacheManager extends CacheManager {
   private val currentKryoTool = new ThreadLocal[KryoSerializerStreamAppTool] {
     override def initialValue = new KryoSerializerStreamAppTool
   }
-
+  val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
   //  private val currentJedis = getResource
   final def openConnection = currentJedis.set(getResource)
 
@@ -86,7 +85,7 @@ abstract class RedisCacheManager extends CacheManager {
   }
 
   override def setHashCacheList(key: String, value: List[String]): Unit = {
-    value.map { x => getConnection.rpush(key, x)}
+    value.map { x => getConnection.rpush(key, x) }
   }
 
   override def setByteCacheString(key: String, value: Any) {
@@ -105,8 +104,7 @@ abstract class RedisCacheManager extends CacheManager {
 
     if (cachedata != null) {
       getKryoTool.deserialize[Any](ByteBuffer.wrap(cachedata))
-    }
-    else null
+    } else null
 
   }
 
@@ -138,36 +136,38 @@ abstract class RedisCacheManager extends CacheManager {
     System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
   }*/
 
-  //new set method for pipeline by multiThread
-  override def setMultiCache(keysvalues: Map[String, Any]) {
-    val t1 = System.currentTimeMillis()
-    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
-    val taskMap = Map[Int, FutureTask[String]]()
-    var index = 0
-    var innermap = keysvalues
-    while (innermap.size > 0) {
-      val settask = new Insert(innermap.take(miniBatch))
-      val futuretask = new FutureTask[String](settask)
-      CacheQryThreadPool.threadPool.submit(futuretask)
-      taskMap.put(index, futuretask)
-      innermap = innermap.drop(miniBatch)
-      index += 1
-    }
-
-    println("start thread : " + index)
-
-    while (taskMap.size > 0) {
-      val keys = taskMap.keys
-      keys.foreach(key => {
-        val task = taskMap.get(key).get
-        if (task.isDone) {
-          taskMap.remove(key)
-        }
-      })
-    }
-
-    System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
-  }
+  // deteled by surq at 2015.12.7 start-----------------UPDATA-------------
+  //  // new set method for pipeline by multiThread
+  //  override def setMultiCache(keysvalues: Map[String, Any]) {
+  //    val t1 = System.currentTimeMillis()
+  //    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
+  //    val taskMap = Map[Int, FutureTask[String]]()
+  //    var index = 0
+  //    var innermap = keysvalues
+  //    while (innermap.size > 0) {
+  //      val settask = new Insert(innermap.take(miniBatch))
+  //      val futuretask = new FutureTask[String](settask)
+  //      CacheQryThreadPool.threadPool.submit(futuretask)
+  //      taskMap.put(index, futuretask)
+  //      innermap = innermap.drop(miniBatch)
+  //      index += 1
+  //    }
+  //
+  //    println("start thread : " + index)
+  //
+  //    while (taskMap.size > 0) {
+  //      val keys = taskMap.keys
+  //      keys.foreach(key => {
+  //        val task = taskMap.get(key).get
+  //        if (task.isDone) {
+  //          taskMap.remove(key)
+  //        }
+  //      })
+  //    }
+  //
+  //    System.out.println("MSET " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
+  //  }
+  // deteled by surq at 2015.12.7 end -----------------UPDATA-------------
 
   //  override def setMultiCache(keysvalues: Map[String, Any]) {
   //    val t1 = System.currentTimeMillis()
@@ -181,7 +181,6 @@ abstract class RedisCacheManager extends CacheManager {
   //    }
   //    System.out.println("MSETTest " + keysvalues.size + " key cost " + (System.currentTimeMillis() - t1))
   //  }
-
 
   //old method
   /*override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
@@ -241,166 +240,215 @@ abstract class RedisCacheManager extends CacheManager {
     multimap
   }*/
 
-  //new get method for pipeline by multiThread
-  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
-    val multimap = Map[String, Any]()
-    var bytekeys = keys.map(x => x.getBytes).toSeq
+  // deteled by surq at 2015.12.7 start-----------------UPDATA-------------
+  //  //new get method for pipeline by multiThread
+  //  override def getMultiCacheByKeys(keys: List[String]): Map[String, Any] = {
+  //    val multimap = Map[String, Any]()
+  //    var bytekeys = keys.map(x => x.getBytes).toSeq
+  //
+  //    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
+  //
+  //    val taskMap = Map[Int, FutureTask[JList[Array[Byte]]]]()
+  //    var index = 0
+  //    while (bytekeys.size > 0) {
+  //      val qrytask = new Qry(bytekeys.take(miniBatch))
+  //      val futuretask = new FutureTask[JList[Array[Byte]]](qrytask)
+  //      CacheQryThreadPool.threadPool.submit(futuretask)
+  //      taskMap.put(index, futuretask)
+  //
+  //      bytekeys = bytekeys.drop(miniBatch)
+  //      index += 1
+  //    }
+  //
+  //    println("start thread : " + index)
+  //    val cachedata = Map[Int, JList[Array[Byte]]]()
+  //
+  //    var errorFlag = false
+  //    while (taskMap.size > 0) {
+  //      val keys = taskMap.keys
+  //      keys.foreach(key => {
+  //        val task = taskMap.get(key).get
+  //        if (task.isDone) {
+  //          try {
+  //            cachedata += (key -> task.get())
+  //          } catch {
+  //            case e: Exception => {
+  //              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
+  //              errorFlag = true
+  //              e.printStackTrace()
+  //            }
+  //          } finally {
+  //            taskMap.remove(key)
+  //          }
+  //        }
+  //      })
+  //    }
+  //    if(errorFlag) logger.error("= = " * 15 +"out of loop with errorFlag = " + errorFlag)
+  //
+  //    val flatdata = new JArrayList[Array[Byte]]()
+  //
+  //    cachedata.toList.sortBy(_._1).map(_._2).foreach(x => {
+  //      x.foreach(flatdata.add(_))
+  //    })
+  //
+  //    val anyvalues = flatdata.map(x => {
+  //      if (x != null && x.length > 0) {
+  //        val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
+  //        data
+  //      }
+  //      else null
+  //    }).toList
+  //
+  //    for (i <- 0 to keys.length - 1) {
+  //      multimap += (keys(i) -> anyvalues(i))
+  //    }
+  //    multimap
+  //  }
+  //  
+  //  override def setCommonCacheValue(cacheName: String, key: String, value: String) = {
+  //    getConnection.hset(cacheName, key, value)
+  //  }
+  //  //new get method for pipeline by multiThread
+  //  override def hgetall(keys: List[String]): Map[String, Map[String, String]] = {
+  //    val multimap = Map[String, Map[String, String]]()
+  //    var bytekeys = keys.toSeq
+  //
+  //    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
+  //
+  //    val taskMap = Map[Int, FutureTask[JList[JMap[String, String]]]]()
+  //    var index = 0
+  //    while (bytekeys.size > 0) {
+  //      val qrytask = new QryHashall(bytekeys.take(miniBatch))
+  //      val futuretask = new FutureTask[JList[JMap[String, String]]](qrytask)
+  //      CacheQryThreadPool.threadPool.submit(futuretask)
+  //      taskMap.put(index, futuretask)
+  //
+  //      bytekeys = bytekeys.drop(miniBatch)
+  //      index += 1
+  //    }
+  //
+  //    val cachedata = Map[Int, JList[JMap[String, String]]]()
+  //
+  //    println("hgetall start thread : " + index)
+  //
+  //    var errorFlag = false
+  //    while (taskMap.size > 0) {
+  //      val keys = taskMap.keys
+  //      keys.foreach(key => {
+  //        val task = taskMap.get(key).get
+  //        if (task.isDone) {
+  //          try {
+  //            cachedata += (key -> task.get())
+  //          } catch {
+  //            case e: Exception => {
+  //              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
+  //              errorFlag = true
+  //              e.printStackTrace()
+  //            }
+  //          } finally {
+  //            taskMap.remove(key)
+  //          }
+  //        }
+  //      })
+  //    }
+  //
+  //    val flatdata = new JArrayList[JMap[String, String]]()
+  //
+  //    cachedata.toList.sortBy(_._1).map(_._2).foreach(x => {
+  //      x.foreach(flatdata.add(_))
+  //    })
+  //
+  //    for (i <- 0 to keys.length - 1) {
+  //      multimap += (keys(i) -> flatdata(i))
+  //    }
+  //    multimap
+  //  }
 
-    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
+  //  def hmset(keyValues: Map[String, Map[String, String]]) {
+  //    val t1 = System.currentTimeMillis()
+  //
+  //    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
+  //    val taskMap = Map[Int, FutureTask[String]]()
+  //    var index = 0
+  //    var innermap = keyValues
+  //    while (innermap.size > 0) {
+  //      val settask = new InsertHash(innermap.take(miniBatch))
+  //      val futuretask = new FutureTask[String](settask)
+  //      CacheQryThreadPool.threadPool.submit(futuretask)
+  //      taskMap.put(index, futuretask)
+  //      innermap = innermap.drop(miniBatch)
+  //      index += 1
+  //    }
+  //
+  //    println("start thread : " + index)
+  //
+  //    while (taskMap.size > 0) {
+  //      val keys = taskMap.keys
+  //      keys.foreach(key => {
+  //        val task = taskMap.get(key).get
+  //        if (task.isDone) {
+  //          taskMap.remove(key)
+  //        }
+  //      })
+  //    }
+  //
+  //    System.out.println("MSET " + keyValues.size + " key cost " + (System.currentTimeMillis() - t1))
+  //  }
+  // deteled by surq at 2015.12.7 end-----------------UPDATA-------------
+  // added by surq at 2015.12.7 start-----------------UPDATA-------------
+  override def setMultiCache(keysvalues: Map[String, Any]) {
+    val kvSplit = keysvalues.sliding(miniBatch, miniBatch).toList
+    kvSplit.foreach(limitBatch => CacheQryThreadPool.threadPool.submit(new FutureTask[String](new Insert(limitBatch))))
+  }
 
-    val taskMap = Map[Int, FutureTask[JList[Array[Byte]]]]()
-    var index = 0
-    while (bytekeys.size > 0) {
-      val qrytask = new Qry(bytekeys.take(miniBatch))
-      val futuretask = new FutureTask[JList[Array[Byte]]](qrytask)
-      CacheQryThreadPool.threadPool.submit(futuretask)
-      taskMap.put(index, futuretask)
+  override def getMultiCacheByKeys(keys: List[String],
+    qryCacheService: java.util.concurrent.ExecutorCompletionService[List[(String, Array[Byte])]]): Map[String, Any] = {
+    val resultMap = Map[String, Any]()
 
-      bytekeys = bytekeys.drop(miniBatch)
-      index += 1
-    }
-
-    println("start thread : " + index)
-    val cachedata = Map[Int, JList[Array[Byte]]]()
-
-    var errorFlag = false
-    while (taskMap.size > 0) {
-      val keys = taskMap.keys
-      keys.foreach(key => {
-        val task = taskMap.get(key).get
-        if (task.isDone) {
-          try {
-            cachedata += (key -> task.get())
-          } catch {
-            case e: Exception => {
-              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
-              errorFlag = true
-              e.printStackTrace()
-            }
-          } finally {
-            taskMap.remove(key)
-          }
+    // 把原数据划分小批次多线程查询
+    val keySplit = keys.sliding(miniBatch, miniBatch).toList
+    try {
+      keySplit.map(keyList => qryCacheService.submit(new Qry(keyList)))
+      for (index <- 0 until keySplit.size) {
+        // 把查询的结果集放入multimap
+        val result = qryCacheService.take().get
+        if (result != null) {
+          result.foreach(rs => 
+            if (rs._2 != null && rs._2.length > 0) resultMap += (rs._1 -> getKryoTool.deserialize[Any](ByteBuffer.wrap(rs._2))))
         }
-      })
-    }
-    if(errorFlag) logger.error("= = " * 15 +"out of loop with errorFlag = " + errorFlag)
-
-    val flatdata = new JArrayList[Array[Byte]]()
-
-    cachedata.toList.sortBy(_._1).map(_._2).foreach(x => {
-      x.foreach(flatdata.add(_))
-    })
-
-    val anyvalues = flatdata.map(x => {
-      if (x != null && x.length > 0) {
-        val data = getKryoTool.deserialize[Any](ByteBuffer.wrap(x))
-        data
       }
-      else null
-    }).toList
-
-    for (i <- 0 to keys.length - 1) {
-      multimap += (keys(i) -> anyvalues(i))
+    } catch {
+      case e: InterruptedException => logger.error("RedisCacheManager.getMultiCacheByKeys－线程中断！", e.getStackTrace())
+      case e1: ExecutionException => logger.error("RedisCacheManager.getMultiCacheByKeys－Execution异常！", e1.getStackTrace())
+      case e2: Exception => logger.error("RedisCacheManager.getMultiCacheByKeys－Exception异常！", e2.getStackTrace())
     }
-    multimap
+    resultMap
   }
 
-  override def setCommonCacheValue(cacheName: String, key: String, value: String) = {
-    getConnection.hset(cacheName, key, value)
+  override def hgetall(keys: List[String],
+    hgetAllService: java.util.concurrent.ExecutorCompletionService[Seq[(String, java.util.Map[String, String])]]): Map[String, Map[String, String]] = {
+    val resultMap = Map[String, Map[String, String]]()
+    // 把原数据划分小批次多线程查询
+    val keySplit = keys.sliding(miniBatch, miniBatch).toList
+    keySplit.map(keyList => hgetAllService.submit(new QryHashall(keyList)))
+
+    for (index <- 0 until keySplit.size) {
+      try {
+        // 把查询的结果集放入multimap
+        val result = hgetAllService.take().get()
+        if (result != null) result.foreach(rs => resultMap += (rs._1 -> rs._2))
+      } catch {
+        case e: InterruptedException => logger.error("RedisCacheManager.hgetall－线程中断！", e.getStackTrace())
+        case e1: ExecutionException => logger.error("RedisCacheManager.hgetall－Execution异常！", e1.getStackTrace())
+        case e2: Exception => logger.error("RedisCacheManager.hgetall－Exception异常！", e2.getStackTrace())
+      }
+    }
+    resultMap
   }
 
+  def hmset(keyValues: Map[String, Map[String, String]]) = keyValues.sliding(miniBatch, miniBatch).toList.foreach(limitBatch =>
+    CacheQryThreadPool.threadPool.submit(new FutureTask[String](new InsertHash(limitBatch))))
 
-  //new get method for pipeline by multiThread
-  override def hgetall(keys: List[String]): Map[String, Map[String, String]] = {
-    val multimap = Map[String, Map[String, String]]()
-    var bytekeys = keys.toSeq
-
-    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
-
-    val taskMap = Map[Int, FutureTask[JList[JMap[String, String]]]]()
-    var index = 0
-    while (bytekeys.size > 0) {
-      val qrytask = new QryHashall(bytekeys.take(miniBatch))
-      val futuretask = new FutureTask[JList[JMap[String, String]]](qrytask)
-      CacheQryThreadPool.threadPool.submit(futuretask)
-      taskMap.put(index, futuretask)
-
-      bytekeys = bytekeys.drop(miniBatch)
-      index += 1
-    }
-
-    val cachedata = Map[Int, JList[JMap[String, String]]]()
-
-    println("hgetall start thread : " + index)
-
-    var errorFlag = false
-    while (taskMap.size > 0) {
-      val keys = taskMap.keys
-      keys.foreach(key => {
-        val task = taskMap.get(key).get
-        if (task.isDone) {
-          try {
-            cachedata += (key -> task.get())
-          } catch {
-            case e: Exception => {
-              logger.error("= = " * 15 + "found error in  RedisCacheManager.getMultiCacheByKeys")
-              errorFlag = true
-              e.printStackTrace()
-            }
-          } finally {
-            taskMap.remove(key)
-          }
-        }
-      })
-    }
-
-    val flatdata = new JArrayList[JMap[String, String]]()
-
-    cachedata.toList.sortBy(_._1).map(_._2).foreach(x => {
-      x.foreach(flatdata.add(_))
-    })
-
-    for (i <- 0 to keys.length - 1) {
-      multimap += (keys(i) -> flatdata(i))
-    }
-    multimap
-  }
-
-
-  def hmset(keyValues: Map[String, Map[String, String]]) {
-    val t1 = System.currentTimeMillis()
-
-    val miniBatch = MainFrameConf.systemProps.getInt("cacheQryTaskSizeLimit")
-    val taskMap = Map[Int, FutureTask[String]]()
-    var index = 0
-    var innermap = keyValues
-    while (innermap.size > 0) {
-      val settask = new InsertHash(innermap.take(miniBatch))
-      val futuretask = new FutureTask[String](settask)
-      CacheQryThreadPool.threadPool.submit(futuretask)
-      taskMap.put(index, futuretask)
-      innermap = innermap.drop(miniBatch)
-      index += 1
-    }
-
-    println("start thread : " + index)
-
-    while (taskMap.size > 0) {
-      val keys = taskMap.keys
-      keys.foreach(key => {
-        val task = taskMap.get(key).get
-        if (task.isDone) {
-          taskMap.remove(key)
-        }
-      })
-    }
-
-    System.out.println("MSET " + keyValues.size + " key cost " + (System.currentTimeMillis() - t1))
-  }
-
-
-
+  override def setCommonCacheValue(cacheName: String, key: String, value: String) = getConnection.hset(cacheName, key, value)
+  // added by surq at 2015.12.7 end-----------------UPDATA-------------
 }
-
-
-
