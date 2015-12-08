@@ -10,18 +10,13 @@ import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import java.util.concurrent.ExecutorCompletionService
 
 /**
  * Created by tsingfu on 15/8/18.
  */
 object CacheQryThreadPool {
   // 初始化线程池
-//        val threadPoCol: ExecutorService = Executors.newFixedThreadPool(MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
   val threadPool: ExecutorService = Executors.newCachedThreadPool
-//  val completionService = new ExecutorCompletionService[Seq[(String, java.util.Map[String, String])]](threadPool)
-//  val completionQry = new ExecutorCompletionService[List[(String, Array[Byte])]](threadPool)
-
   //  val threadPool = ThreadUtils.newDaemonCachedThreadPool("CacheQryDaemonCachedThreadPool", MainFrameConf.systemProps.getInt("cacheQryThreadPoolSize"))
 
   val DEFAULT_CHARACTER_SET = "UTF-8"
@@ -46,9 +41,30 @@ class Qry(keyList: List[String]) extends Callable[List[(String, Array[Byte])]] {
         throw ex
     } finally {
       conn.close()
-//      println("Qry " + keyList.size + " key cost " + (System.currentTimeMillis() - t1) + " Millis")
     }
     if (result != null) keyList.zip(result) else null
+  }
+}
+
+class QryHashall(keys: Seq[String]) extends Callable[Seq[(String, java.util.Map[String, String])]] {
+  val logger = LoggerFactory.getLogger(this.getClass)
+
+  override def call() = {
+    val t1 = System.currentTimeMillis()
+    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
+    var result: JList[JMap[String, String]] = null
+    try {
+      val pgl = conn.pipelined()
+      keys.foreach(x => pgl.hgetAll(x))
+      val result_tmp = pgl.syncAndReturnAll()
+      result = result_tmp.asInstanceOf[JList[JMap[String, String]]]
+    } catch {
+      case ex: Exception =>
+        logger.error("= = " * 15 + "found error in QryHashall.call()")
+    } finally {
+      conn.close()
+    }
+   if (result != null) keys.zip(result) else null
   }
 }
 
@@ -80,29 +96,7 @@ class Insert(value: Map[String, Any]) extends Callable[String] {
   }
 }
 
-class QryHashall(keys: Seq[String]) extends Callable[Seq[(String, java.util.Map[String, String])]] {
-  val logger = LoggerFactory.getLogger(this.getClass)
 
-  override def call() = {
-    val t1 = System.currentTimeMillis()
-    val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
-    var result: JList[JMap[String, String]] = null
-    try {
-      val pgl = conn.pipelined()
-      keys.foreach(x => pgl.hgetAll(x))
-      val result_tmp = pgl.syncAndReturnAll()
-      result = result_tmp.asInstanceOf[JList[JMap[String, String]]]
-//      println("QryHashall result.size:" + result.size)
-    } catch {
-      case ex: Exception =>
-        logger.error("= = " * 15 + "found error in QryHashall.call()")
-    } finally {
-      conn.close()
-//      println("QryHashall " + keys.size + " key cost " + (System.currentTimeMillis() - t1) + " Millis")
-    }
-   if (result != null) keys.zip(result) else null
-  }
-}
 
 class InsertHash(value: Map[String, Map[String, String]]) extends Callable[String] {
   val logger = LoggerFactory.getLogger(this.getClass)
