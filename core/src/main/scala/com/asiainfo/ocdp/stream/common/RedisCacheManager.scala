@@ -13,6 +13,9 @@ import scala.collection.convert.wrapAsScala._
 import scala.collection.mutable.Map
 import java.util.concurrent.ExecutionException
 
+/**
+ * Created by surq on 12/09/15
+ */
 abstract class RedisCacheManager extends CacheManager {
 
   val logger = LoggerFactory.getLogger(this.getClass)

@@ -2,8 +2,8 @@ package com.asiainfo.ocdp.stream.tools
 
 import java.util.Properties
 
-import com.asiainfo.ocdp.stream.config.{DataSourceConf, MainFrameConf}
-import kafka.producer.{KeyedMessage, ProducerConfig, Producer}
+import com.asiainfo.ocdp.stream.config.{ DataSourceConf, MainFrameConf }
+import kafka.producer.{ KeyedMessage, ProducerConfig, Producer }
 
 import scala.collection.mutable
 
@@ -38,7 +38,6 @@ object KafkaSendTool {
     currentProducer.get().close()
   }
 
-
   private val producerMap = new ThreadLocal[mutable.Map[String, Producer[String, String]]] {
     override def initialValue = getProducerMap
   }
@@ -47,10 +46,17 @@ object KafkaSendTool {
     mutable.Map[String, Producer[String, String]]()
   }
 
-  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) {
-    getProducer(dsConf).send(message: _*)
-  }
+// modified by surq at 2015.12.10 ---start-----
+  //  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) {
+  //    getProducer(dsConf).send(message: _*)
+  //  }
 
+  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) {
+    val producer = getProducer(dsConf)
+    val msgList = message.sliding(200,200)
+    msgList.foreach(list => producer.send(list: _*))
+  }
+// modified by surq at 2015.12.10 ---end-----
   private def getProducer(dsConf: DataSourceConf): Producer[String, String] = {
 
     val dsid2ProducerMap = producerMap.get()
