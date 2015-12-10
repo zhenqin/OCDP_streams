@@ -47,7 +47,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
   final def process(ssc: StreamingContext) = {
     //    this.ssc = ssc
     val sqlc = new SQLContext(ssc.sparkContext)
-
+    // 用户自定义sql的方法
     registFunction(sqlc)
 
     //1 根据输入数据接口配置，生成数据流 DStream
@@ -62,14 +62,13 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
       //2.1 流数据转换
       val rowRDD = rdd.map(inputArr => transform(inputArr, schema)).collect { case Some(row) => row }
       if (rowRDD.partitions.size > 0) {
-
-        val df: DataFrame = sqlc.createDataFrame(rowRDD, schema)
+        val dataFrame = sqlc.createDataFrame(rowRDD, schema)
         // modified by surq at 2015.11.11 start
         val filter_expr = conf.get("filter_expr").trim()
 
-        val mixDF = if (filter_expr != "") df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
+        val mixDF = if (filter_expr != "") dataFrame.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
         //         if (filter_expr != "") mixDF = df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
-        else df.selectExpr(allItemsSchema.fieldNames: _*)
+        else dataFrame.selectExpr(allItemsSchema.fieldNames: _*)
         // deleted by surq at 2015.11.11
         // val mixDF = df.filter(conf.get("filter_expr", "1=1")).selectExpr(udfSchema.fieldNames: _*)
         // modified by surq at 2015.11.11 end
@@ -89,7 +88,9 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 
         val enDF = execLabels(mixDF)
         val enhancedDF = sqlc.read.json(enDF)
+        enhancedDF.persist
         makeEvents(enhancedDF, conf.get("uniqKeys"))
+        enhancedDF.unpersist
         //--------------surq start U------------------         
 
         // add by surq at 2015.11.09 end
@@ -334,8 +335,8 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
    */
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
     println(" Begin exec evets : " + System.currentTimeMillis())
-    df.persist
+//    df.persist
     events.map(event => event.buildEvent(df, uniqKeys))
-    df.unpersist
+//    df.unpersist
   }
 }

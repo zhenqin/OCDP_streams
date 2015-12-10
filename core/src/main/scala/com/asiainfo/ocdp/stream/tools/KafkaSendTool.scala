@@ -46,17 +46,23 @@ object KafkaSendTool {
     mutable.Map[String, Producer[String, String]]()
   }
 
-// modified by surq at 2015.12.10 ---start-----
+  // modified by surq at 2015.12.10 ---start-----
   //  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) {
   //    getProducer(dsConf).send(message: _*)
   //  }
+// // 分包发送
+//  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) {
+//    val producer = getProducer(dsConf)
+//    val msgList = message.sliding(200, 200)
+//    msgList.foreach(list => producer.send(list: _*))
+//  }
 
-  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) {
-    val producer = getProducer(dsConf)
-    val msgList = message.sliding(200,200)
-    msgList.foreach(list => producer.send(list: _*))
-  }
-// modified by surq at 2015.12.10 ---end-----
+  // 多线程、多producer,分包发送
+  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) =
+    message.sliding(200, 200).foreach(list => CacheQryThreadPool.threadPool.execute(new Runnable {
+      override def run() = getProducer(dsConf).send(list: _*)
+    }))
+  // modified by surq at 2015.12.10 ---end-----
   private def getProducer(dsConf: DataSourceConf): Producer[String, String] = {
 
     val dsid2ProducerMap = producerMap.get()

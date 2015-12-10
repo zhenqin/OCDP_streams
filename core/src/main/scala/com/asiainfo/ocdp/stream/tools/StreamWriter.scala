@@ -97,7 +97,8 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
           else messages.append(new KeyedMessage[String, String](topic, key, msg))
           key
         })
-      KafkaSendTool.sendMessage(diConf.dsConf, messages.toList)
+        val msgList = messages.toList
+      if (msgList.size > 0)KafkaSendTool.sendMessage(diConf.dsConf, msgList)
       it.iterator
     })
   }
