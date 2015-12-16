@@ -70,21 +70,22 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
   //    // modify by surq at 2015.11.03 end
   //  }
 
-  def push(rdd: RDD[String], conf: EventConf, uniqKeys: String) = setMessage(rdd, conf, uniqKeys).count
+  def push(rdd: RDD[String], conf: EventConf, uniqKeys: String)= setMessage(rdd, conf, uniqKeys).count
   def push(df: DataFrame, conf: EventConf, uniqKeys: String) = setMessage(df.toJSON, conf, uniqKeys).count
 
   /**
    * 向kafka发送数据
    */
-  def setMessage(jsonRDD: RDD[String], conf: EventConf, uniqKeys: String): RDD[String] = {
+  
+  def setMessage(jsonRDD: RDD[String], conf: EventConf, uniqKeys: String) = {
     var fildList = conf.select_expr.split(",")
     if (conf.get("ext_fields", null) != null && conf.get("ext_fields") != "") {
       val fields = conf.get("ext_fields").split(",").map(ext => (ext.split("as"))(1).trim)
       fildList = fildList ++ fields
     }
     val delim = conf.delim
-
     val topic = diConf.get("topic")
+
     val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys)
     resultRDD.mapPartitions(iter => {
       val messages = ArrayBuffer[KeyedMessage[String, String]]()
@@ -97,8 +98,8 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
           else messages.append(new KeyedMessage[String, String](topic, key, msg))
           key
         })
-        val msgList = messages.toList
-      if (msgList.size > 0)KafkaSendTool.sendMessage(diConf.dsConf, msgList)
+      val msgList = messages.toList
+      if (msgList.size > 0) KafkaSendTool.sendMessage(diConf.dsConf, msgList)
       it.iterator
     })
   }

@@ -138,6 +138,7 @@ class DataInterfaceServer extends Logging with Serializable {
       propsMap.foreach(kvMap => conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get))
 
       // 业务对应的输出数据接口配置，每个业务一个输出事件接口
+      // surq: 存放输出信息：[interfaceID->,delim->,interval->]
       val outputIFIdsArrMap = Json4sUtils.jsonStr2ArrMap(propsJsonStr, "output_dis")
       val outputIFIdArr = ArrayBuffer[DataInterfaceConf]()
 
@@ -146,6 +147,7 @@ class DataInterfaceServer extends Logging with Serializable {
       var delim =","
       outputIFIdsArrMap.foreach(kvMap => {
         val diid = kvMap.get("diid").get
+        // 加载Interface内容
         outputIFIdArr += (getDataInterfaceInfoById(diid))
         send_interval = kvMap.get("interval").get.toInt
         delim = kvMap.get("delim").get

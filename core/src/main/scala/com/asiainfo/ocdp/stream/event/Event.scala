@@ -53,7 +53,7 @@ class Event extends Serializable {
   //
   //  }
 
-  def buildEvent(df: DataFrame, uniqKeys: String) {
+  def buildEvent(df: DataFrame, uniqKeys: String) = {
     // 用户配置的本业务输出字段
     var mix_sel_expr = conf.select_expr.split(",")
     // 把主键追加到业务输出字段列中。查看用户配置的本业务输出字段中是否包括主键字段，如果没有则追加
@@ -72,7 +72,6 @@ class Event extends Serializable {
     // 如果业务输出周期不为0，那么需要从codis中取出比兑营销时间，满足条件的输出
     val jsonRDD = if (EventConstant.RealtimeTransmission != conf.interval) checkEvent(eventDF, uniqKeys)
     else eventDF.toJSON
-
     outputEvent(jsonRDD, uniqKeys)
   }
 
@@ -336,7 +335,7 @@ class Event extends Serializable {
         // 把list放入线程池更新codis
         if (index == size - 1) batchList += batchArrayBuffer.toArray
       }
-      val outPutJsonList = eventServer.getEventCache(eventCacheService,batchList.toArray, time_EventId, conf.getInterval)
+      val outPutJsonList = eventServer.getEventCache(eventCacheService, batchList.toArray, time_EventId, conf.getInterval)
       outPutJsonList.iterator
     })
   }
@@ -389,10 +388,12 @@ class Event extends Serializable {
   /**
    * rdd格式流输出
    */
-  def outputEvent(rdd: RDD[String], uniqKeys: String) {
-    conf.outIFIds.foreach(ifconf => {
+  def outputEvent(rdd: RDD[String], uniqKeys: String) = {
+    conf.outIFIds.map(ifconf => {
       val writer = StreamWriterFactory.getWriter(ifconf)
+      val testtime3 = System.currentTimeMillis
       writer.push(rdd, conf, uniqKeys)
+      val testtime4 = System.currentTimeMillis
     })
   }
 }

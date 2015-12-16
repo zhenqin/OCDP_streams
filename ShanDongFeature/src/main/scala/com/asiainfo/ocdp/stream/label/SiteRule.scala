@@ -38,7 +38,8 @@ class SiteRule extends Label {
     // 标记行政区域标签
     // 20150727 新增上下班业务标签 labels['area_info']['lac_ci']
     val areainfo_data = cachedArea.filter(_._1 != LabelConstant.LABEL_AREA_LIST_KEY).map(x => (info_sine + x._1 -> x._2))
-    newLine = newLine ++ areainfo_data ++ Map("lac_ci" -> (line("lac") + line("ci"))) ++ line
+//    newLine = newLine ++ areainfo_data ++ Map("lac_ci" -> (line("lac") + line("ci"))) ++ line
+     newLine = newLine ++ areainfo_data ++ line
     (newLine.toMap, cache)
   }
 

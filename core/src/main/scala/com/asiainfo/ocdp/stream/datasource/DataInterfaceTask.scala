@@ -16,6 +16,7 @@ import org.apache.spark.rdd.RDD
 import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorCompletionService
 import com.asiainfo.ocdp.stream.tools.CacheQryThreadPool
+import java.util.concurrent.Callable
 
 /**
  * Created by surq on 12/09/15
@@ -27,16 +28,9 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
   val conf = dataInterfaceService.getDataInterfaceInfoById(id)
   val labels = dataInterfaceService.getLabelsByIFId(id)
   val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
-
   conf.setInterval(interval)
   // 原始信令字段个数
   val baseItemSize = conf.getBaseItemsSize
-  //  // 所有业务要输出的字段合集
-  //  val select_allEvent_items = events.map(event =>event.conf.getSelect_expr)
-  //  // 输出的主键字段
-  //  val uniqkeys = conf.get("uniqKeys").split(":")
-  //    // 所有业务要输出的字段合集＋主键字段
-  //  val select_items = (select_allEvent_items ++ uniqkeys).toSet
 
   protected def transform(source: String, schema: StructType): Option[Row] = {
     val delim = conf.get("delim", ",")
@@ -58,52 +52,33 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
     // 全量字段: baseItems + udfItems 
     val allItemsSchema = conf.getAllItemsSchema
     //2 流数据处理
-    inputStream.foreachRDD(rdd => {
+    val transFormRDD = inputStream.foreach(rdd => {
+      val t0 = System.currentTimeMillis()
       //2.1 流数据转换
       val rowRDD = rdd.map(inputArr => transform(inputArr, schema)).collect { case Some(row) => row }
       if (rowRDD.partitions.size > 0) {
+        val t1 = System.currentTimeMillis()
+        println("1.kafka RDD 转换成 rowRDD 耗时 (millis):" + (t1 - t0))
         val dataFrame = sqlc.createDataFrame(rowRDD, schema)
-        // modified by surq at 2015.11.11 start
+        val t2 = System.currentTimeMillis
+        println("2.rowRDD 转换成 DataFrame 耗时 (millis):" + (t2 - t1))
         val filter_expr = conf.get("filter_expr").trim()
-
         val mixDF = if (filter_expr != "") dataFrame.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
-        //         if (filter_expr != "") mixDF = df.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
         else dataFrame.selectExpr(allItemsSchema.fieldNames: _*)
-        // deleted by surq at 2015.11.11
-        // val mixDF = df.filter(conf.get("filter_expr", "1=1")).selectExpr(udfSchema.fieldNames: _*)
-        // modified by surq at 2015.11.11 end
-        // add by surq at 2015.11.09 start
+        val t3 = System.currentTimeMillis
+        println("3.DataFrame 最初过滤不规则数据耗时 (millis):" + (t3 - t2))
+        val labelRDD = execLabels(mixDF)
+        val t4 = System.currentTimeMillis
+        println("4.dataframe 转成rdd打标签耗时(millis):" + (t4 - t3))
 
-        //--------------surq start U------------------  
-        //        mixDF.persist()
-        //        if (mixDF.count > 0) {
-        //          val enDF = execLabels(mixDF)
-        //          val enhancedDF = enDF._1
-        //          val cacheRDD = enDF._2
-        //          enhancedDF.persist()
-        //          makeEvents(enhancedDF, conf.get("uniqKeys"))
-        //          enhancedDF.unpersist()
-        //        }
-        //        mixDF.unpersist()
+        // read.json为spark sql 动作类提交job
+        val enhancedDF = sqlc.read.json(labelRDD)
 
-        val enDF = execLabels(mixDF)
-        val enhancedDF = sqlc.read.json(enDF)
-        enhancedDF.persist
+        val t5 = System.currentTimeMillis
+        println("5.RDD 转换成 DataFrame 耗时(millis):" + (t5 - t4))
+        
         makeEvents(enhancedDF, conf.get("uniqKeys"))
-        enhancedDF.unpersist
-        //--------------surq start U------------------         
-
-        // add by surq at 2015.11.09 end
-        // deleted by surq at 2015.11.09 start
-        //          df.persist()
-        //          val enhancedDF = execLabels(mixDF)
-        //          df.unpersist()
-        //
-        //          enhancedDF.persist
-        //          makeEvents(enhancedDF, conf.get("uniqKeys"))
-        //          //        subscribeEvents(eventMap)
-        //          enhancedDF.unpersist()
-        // deleted by surq at 2015.11.09 end
+        println("6.所有业务营销 耗时(millis):" + (System.currentTimeMillis - t5))
       }
     })
   }
@@ -249,7 +224,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
   /**
    * 字段增强：根据uk从codis中取出相关关联数据，进行打标签操作
    */
-  def execLabels(df: DataFrame): (RDD[String]) = {
+  def execLabels(df: DataFrame): RDD[String] = {
     df.toJSON.mapPartitions(iter => {
       val qryCacheService = new ExecutorCompletionService[List[(String, Array[Byte])]](CacheQryThreadPool.threadPool)
       val hgetAllService = new ExecutorCompletionService[Seq[(String, java.util.Map[String, String])]](CacheQryThreadPool.threadPool)
@@ -335,8 +310,8 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
    */
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
     println(" Begin exec evets : " + System.currentTimeMillis())
-//    df.persist
-    events.map(event => event.buildEvent(df, uniqKeys))
-//    df.unpersist
+        df.persist
+        events.map(event => event.buildEvent(df, uniqKeys))
+        df.unpersist
   }
 }

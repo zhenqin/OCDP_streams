@@ -45,7 +45,7 @@ class LocationStayRule extends Label {
     val cacheMaxLastTime = getCacheMaxLastTime(cacheMutableMap)
     // 取在siteRule（区域规则）中所打的area标签list
 
-    val locationList = line.filterKeys(_.startsWith("area_")).keys
+    val locationList = line.filterKeys(_.startsWith("area_")).keys.map(key => key.substring(5))
 
     val timeMs = DateFormatUtils.dateStr2Ms(line("time"), "yyyyMMdd HH:mm:ss.SSS")
 
@@ -70,14 +70,11 @@ class LocationStayRule extends Label {
         labelAction(location, cacheMutableMap, mcStayLabelsMap, timeMs)
       }
     })
-
     // c. 给mcsoruce设定连续停留[LABEL_STAY]标签
     mcStayLabelsMap ++= line
-
     //3更新缓存
     // map属性转换
     cacheInstance.labelsPropList = transformCacheMap2ImmutableMap(cacheMutableMap)
-
     (mcStayLabelsMap.toMap, cacheInstance)
   }
 
@@ -130,7 +127,7 @@ class LocationStayRule extends Label {
     val area = labelsPropMap.get(location)
     area match {
       case None => {
-        mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
+        mcStayLabelsMap += ((type_sine + location)  -> LabelConstant.LABEL_STAY_TIME_ZERO)
         addCacheAreaStayTime(labelsPropMap, location, mcTime, mcTime)
       }
       case Some(currentStatus) => {
@@ -139,33 +136,32 @@ class LocationStayRule extends Label {
         //        println("FIRST TIME : " + first + " , LAST TIME : " + last + " , MCTIME : " + mcTime)
         if (first > last) {
           // 无效数据，丢弃，本条视为first
-          mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
+          mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
           updateCacheStayTime(currentStatus, mcTime, mcTime)
         } else if (mcTime < first) {
           // 本条记录属于延迟到达，更新开始时间
-          currentStatus.put(LabelConstant.LABEL_STAY_FIRSTTIME, mcTime.toString)
-          mcStayLabelsMap.put(location, evaluateTime(last - first, last - mcTime))
           if (first - mcTime > thresholdValue) {
+            // 原则上这种情况不存在，mctime< maxlastTime + threshold 的数据都没有
             // 本条记录无效，输出空标签，不更新cache
-            mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_TIME_ZERO)
+            mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
           } else {
             // 本条记录属于延迟到达，更新开始时间
             currentStatus.put(LabelConstant.LABEL_STAY_FIRSTTIME, mcTime.toString)
-            mcStayLabelsMap.put(location, evaluateTime(last - first, last - mcTime))
+            mcStayLabelsMap.put((type_sine + location), evaluateTime(last - first, last - mcTime))
           }
         } else if (mcTime <= last) {
           // 本条属于延迟到达，不处理
-          mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
+          mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
         } else if (mcTime - last > thresholdValue) {
           // 本条与上一条数据间隔过大，判定为不连续
-          mcStayLabelsMap += (location -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
+          mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_DEFAULT_TIME)
           updateCacheStayTime(currentStatus, mcTime, mcTime)
         } else {
           // 本条为正常新数据，更新cache后判定
           currentStatus.put(LabelConstant.LABEL_STAY_LASTTIME, mcTime.toString)
 
           val newtime = evaluateTime(last - first, mcTime - first)
-          mcStayLabelsMap.put(location, newtime)
+          mcStayLabelsMap.put((type_sine + location), newtime)
         }
       }
     }
