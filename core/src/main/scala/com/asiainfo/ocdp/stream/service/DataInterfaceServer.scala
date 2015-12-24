@@ -95,6 +95,7 @@ class DataInterfaceServer extends Logging with Serializable {
         fieldsArrMap.foreach(kvMap => {
           if (!kvMap.isEmpty) fieldsList += kvMap.get("pvalue").get
         })
+        //打标签字段
         conf.setFields(fieldsList.toList)
       }
 

@@ -2,6 +2,7 @@ package com.asiainfo.ocdp.stream.label
 
 import com.asiainfo.ocdp.stream.common.StreamingCache
 import scala.collection.mutable
+import com.asiainfo.ocdp.stream.config.LabelConf
 
 /**
  * Created by tsingfu on 15/9/14.
@@ -12,7 +13,7 @@ class ExtLastimeiRule extends Label {
     val changeImeiCache = if (cache == null) new ChangeImeiProps else cache.asInstanceOf[ChangeImeiProps]
 
     val newLine = fieldsMap()
-    newLine += ("last_imei" -> changeImeiCache.cacheValue)
+    newLine.update("last_imei", changeImeiCache.cacheValue)
     newLine ++= line
 
     //更新cache

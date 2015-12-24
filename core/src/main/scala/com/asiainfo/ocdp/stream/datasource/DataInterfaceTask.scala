@@ -282,7 +282,6 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
             case Some(cache) => cache
             case None => null
           }
-
           // 传入本记录、往期中间记算结果cache、相关的用户资料表，进行打标签操作
           val resultTuple = label.attachLabel(value, old_cache, labelQryData)
           // 增强记录信息，加标签字段

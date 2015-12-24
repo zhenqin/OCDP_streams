@@ -3,6 +3,7 @@ package com.asiainfo.ocdp.stream.label
 import com.asiainfo.ocdp.stream.common.StreamingCache
 import org.slf4j.LoggerFactory
 import scala.collection.mutable
+import com.asiainfo.ocdp.stream.config.LabelConf
 
 /**
  * Created by leo on 4/29/15.
@@ -74,7 +75,7 @@ class UserBaseInfoRule extends Label {
     } else {
       // do nothing
     }
-
+     
     //    line.foreach(fieldMap.+(_))
     fieldMap ++= line
 

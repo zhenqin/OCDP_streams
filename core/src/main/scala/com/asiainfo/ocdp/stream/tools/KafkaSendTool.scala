@@ -104,8 +104,13 @@ object KafkaSendTool {
   //      override def run() = getProducer(dsConf).send(list: _*)
   //    }))
 
-  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) =
-    message.sliding(200, 200).foreach(list => getProducer(dsConf).send(list: _*))
+  def sendMessage(dsConf: DataSourceConf, message: List[KeyedMessage[String, String]]) = {
+    val msgList = message.sliding(200, 200)
+    if (msgList.size > 0){
+    	val producer = getProducer(dsConf)
+    	message.sliding(200, 200).foreach(list => producer.send(list: _*))
+    }
+  }
 
   // 对应的producer若不存在，则创建新的producer，并存入dsid2ProducerMap
   private def getProducer(dsConf: DataSourceConf): Producer[String, String] =

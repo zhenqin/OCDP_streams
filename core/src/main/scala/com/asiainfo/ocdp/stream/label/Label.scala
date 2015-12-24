@@ -16,13 +16,19 @@ trait Label extends Serializable {
   def init(lrconf: LabelConf) {
     conf = lrconf
   }
+  // surq add
+  def getLabelConf=conf
 
   def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache)
 
   def getQryKeys(line: Map[String, String]): Set[String] = null
 
+  /**
+   * 初始化用户定义需求标签值
+   */
   def fieldsMap(): mutable.Map[String, String] = {
     val fields = mutable.Map[String, String]()
+    //用户定义需求标签
     conf.getFields.foreach(x => fields += (x -> ""))
     fields
   }

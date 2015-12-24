@@ -3,9 +3,9 @@ package com.asiainfo.ocdp.stream.label
 import com.asiainfo.ocdp.stream.common.StreamingCache
 import com.asiainfo.ocdp.stream.constant.LabelConstant
 import com.asiainfo.ocdp.stream.tools.DateFormatUtils
-
 import scala.collection.mutable
 import scala.util.Sorting._
+import com.asiainfo.ocdp.stream.config.LabelConf
 
 /**
  * Created by tsingfu on 15/9/15.
@@ -38,40 +38,51 @@ class LocationStayRule extends Label {
     val cacheImmutableMap = cacheInstance.labelsPropList
     // map属性转换
     val cacheMutableMap = transformCacheMap2mutableMap(cacheImmutableMap)
-    // mcsource 打标签用
-    var mcStayLabelsMap = fieldsMap()
+    // mcsource 打标签用[初始化标签值]
+    val initMap = fieldsMap()
+    // 只对当前信令所在区域打驻留标签,用户定义的非信令所在区域用黙认值“0”代替
+    val mcStayLabelsMap = initMap.map(kv => (kv._1, LabelConstant.LABEL_STAY_DEFAULT_TIME))
 
+    // 画面定义驻留标签字段列表
+    val stadyLabelKey = initMap.keys.toList
+    // 从已经部分增强的信令中找出所有区域，并过滤出要求打驻留标签的区域
+    // 取在siteRule（区域规则）中所打的area标签list
+   val locations = line.filterKeys(_.startsWith("area_")).filter(area => (stadyLabelKey.contains("stay_"+(area._1.trim).substring(5)) && area._2 == "true"))
+   
+   // 去除前缀"stay_"，的区域列表
+    val locationList = locations.keys.map(key => (key.substring(5)).trim).toList
+    
     // cache中所有区域的最大lastTime
     val cacheMaxLastTime = getCacheMaxLastTime(cacheMutableMap)
-    // 取在siteRule（区域规则）中所打的area标签list
+    // 
+    if (locationList.size > 0) {
+      val timeMs = DateFormatUtils.dateStr2Ms(line("time"), "yyyyMMdd HH:mm:ss.SSS")
+      locationList.map(location => {
+        // A.此用的所有区域在cache中的信息已经过期视为无效，标签打为“0”；重新设定cache;
+        if (timeMs - cacheMaxLastTime > thresholdValue) {
+          // 1. 连续停留标签置“0”
+          mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
+          // 2. 清除cache信息
+          cacheMutableMap.clear()
+          // 3. 重置cache信息
+          val cacheStayLabelsMap = mutable.Map[String, String]()
+          cacheStayLabelsMap += (LabelConstant.LABEL_STAY_FIRSTTIME -> timeMs.toString)
+          cacheStayLabelsMap += (LabelConstant.LABEL_STAY_LASTTIME -> timeMs.toString)
+          cacheMutableMap += ((type_sine + location) -> cacheStayLabelsMap)
+        } else if (cacheMaxLastTime - timeMs > thresholdValue) {
+          //B.此条数据为延迟到达的数据，已超过阈值视为无效，标签打为“0”；cache不做设定;
+          // 1. 连续停留标签置“0”
+          mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
+        } else {
+          //C.此条数据时间为[(maxLastTime-thresholdValue)~maxLastTime~(maxLastTime+thresholdValue)]之间
+          labelAction(location, cacheMutableMap, mcStayLabelsMap, timeMs)
+        }
+      })
+    }
 
-    val locationList = line.filterKeys(_.startsWith("area_")).keys.map(key => key.substring(5))
-
-    val timeMs = DateFormatUtils.dateStr2Ms(line("time"), "yyyyMMdd HH:mm:ss.SSS")
-
-    locationList.map(location => {
-      // A.此用的所有区域在cache中的信息已经过期视为无效，标签打为“0”；重新设定cache;
-      if (timeMs - cacheMaxLastTime > thresholdValue) {
-        // 1. 连续停留标签置“0”
-        mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
-        // 2. 清除cache信息
-        cacheMutableMap.clear()
-        // 3. 重置cache信息
-        val cacheStayLabelsMap = mutable.Map[String, String]()
-        cacheStayLabelsMap += (LabelConstant.LABEL_STAY_FIRSTTIME -> timeMs.toString)
-        cacheStayLabelsMap += (LabelConstant.LABEL_STAY_LASTTIME -> timeMs.toString)
-        cacheMutableMap += ((type_sine + location) -> cacheStayLabelsMap)
-      } else if (cacheMaxLastTime - timeMs > thresholdValue) {
-        //B.此条数据为延迟到达的数据，已超过阈值视为无效，标签打为“0”；cache不做设定;
-        // 1. 连续停留标签置“0”
-        mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
-      } else {
-        //C.此条数据时间为[(maxLastTime-thresholdValue)~maxLastTime~(maxLastTime+thresholdValue)]之间
-        labelAction(location, cacheMutableMap, mcStayLabelsMap, timeMs)
-      }
-    })
     // c. 给mcsoruce设定连续停留[LABEL_STAY]标签
     mcStayLabelsMap ++= line
+
     //3更新缓存
     // map属性转换
     cacheInstance.labelsPropList = transformCacheMap2ImmutableMap(cacheMutableMap)
@@ -117,9 +128,9 @@ class LocationStayRule extends Label {
    * 打标签处理并且更新cache<br>
    */
   private def labelAction(location: String,
-                          labelsPropMap: mutable.Map[String, mutable.Map[String, String]],
-                          mcStayLabelsMap: mutable.Map[String, String],
-                          mcTime: Long) {
+    labelsPropMap: mutable.Map[String, mutable.Map[String, String]],
+    mcStayLabelsMap: mutable.Map[String, String],
+    mcTime: Long) {
     // cache属性map
     //    lazy val labelsPropMap = cacheInstance.labelsPropList
     // b. 使用宽松的过滤策略，相同区域信令如果间隔超过${thresholdValue}，则判定为不连续
@@ -127,7 +138,7 @@ class LocationStayRule extends Label {
     val area = labelsPropMap.get(location)
     area match {
       case None => {
-        mcStayLabelsMap += ((type_sine + location)  -> LabelConstant.LABEL_STAY_TIME_ZERO)
+        mcStayLabelsMap += ((type_sine + location) -> LabelConstant.LABEL_STAY_TIME_ZERO)
         addCacheAreaStayTime(labelsPropMap, location, mcTime, mcTime)
       }
       case Some(currentStatus) => {
@@ -203,9 +214,9 @@ class LocationStayRule extends Label {
    * 在cache中追加新的区域属性map并设值<br>
    */
   private def addCacheAreaStayTime(labelsPropMap: mutable.Map[String, mutable.Map[String, String]],
-                                   location: String,
-                                   firstTime: Long,
-                                   lastTime: Long) {
+    location: String,
+    firstTime: Long,
+    lastTime: Long) {
     val map = mutable.Map[String, String]()
     updateCacheStayTime(map, firstTime, lastTime)
     labelsPropMap += (location -> map)
@@ -215,14 +226,13 @@ class LocationStayRule extends Label {
    * 更新cache中区域属性map的firstTime,lastTime值<br>
    */
   private def updateCacheStayTime(map: mutable.Map[String, String],
-                                  firstTime: Long,
-                                  lastTime: Long) {
+    firstTime: Long,
+    lastTime: Long) {
     map += (LabelConstant.LABEL_STAY_FIRSTTIME -> firstTime.toString)
     map += (LabelConstant.LABEL_STAY_LASTTIME -> lastTime.toString)
   }
 
 }
-
 
 class LabelProps extends StreamingCache with Serializable {
   var labelsPropList = Map[String, Map[String, String]]()

@@ -391,9 +391,7 @@ class Event extends Serializable {
   def outputEvent(rdd: RDD[String], uniqKeys: String) = {
     conf.outIFIds.map(ifconf => {
       val writer = StreamWriterFactory.getWriter(ifconf)
-      val testtime3 = System.currentTimeMillis
       writer.push(rdd, conf, uniqKeys)
-      val testtime4 = System.currentTimeMillis
     })
   }
 }

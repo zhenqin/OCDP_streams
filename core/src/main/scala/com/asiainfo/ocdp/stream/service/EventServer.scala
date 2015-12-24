@@ -76,7 +76,7 @@ class EventServer extends Logging with Serializable {
           // codis 中存储的上次营销时间的二进制
           val cache = jsonCache._2
           // 往次营销时间
-          val cache_time = if (jsonCache._2 != null) new String(cache) else "0"
+          val cache_time = if (cache != null) new String(cache) else "0"
           val current_time = System.currentTimeMillis
           // 满足营销
           if (current_time >= (cache_time.toLong + interval * 1000)) {

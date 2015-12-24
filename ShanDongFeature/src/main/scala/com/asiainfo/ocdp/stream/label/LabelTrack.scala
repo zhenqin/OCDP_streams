@@ -3,6 +3,7 @@ package com.asiainfo.ocdp.stream.label
 import com.asiainfo.ocdp.stream.common.StreamingCache
 import com.asiainfo.ocdp.stream.tools.DateFormatUtils
 import scala.collection.mutable
+import com.asiainfo.ocdp.stream.config.LabelConf
 
 /**
  * Created by tsingfu on 15/9/14.
@@ -45,16 +46,19 @@ class LabelTrack extends Label {
 
     /** Extended stream label: 扩展实时标签到流数据() */
     val newLine = fieldsMap()
-    newLine += ("speed" -> speed.toString)
-    newLine += ("distance" -> distance.toString)
-    newLine += ("last_lac_ci" -> last_lacCi)
-
+    // modify by surq at 2015.12.20 start
+    //    newLine += ("speed" -> speed.toString)
+    //    newLine += ("distance" -> distance.toString)
+    //    newLine += ("last_lac_ci" -> last_lacCi)
+    newLine.update("speed", speed.toString)
+    newLine.update("distance", distance.toString)
+    newLine.update("last_lac_ci", last_lacCi)
+    // modify by surq at 2015.12.20 end
     newLine ++= line
 
     /** Update Codis Realtime Object: 更新Codis(用户实时标签对象表) */
     labelTrackCache.cacheTrack = Map[String, String](
-      "geo_longitude" -> geo_longitude_new, "geo_latitude" -> geo_latitude_new, "time" -> timeMs.toString
-    )
+      "geo_longitude" -> geo_longitude_new, "geo_latitude" -> geo_latitude_new, "time" -> timeMs.toString)
 
     (newLine.toMap, labelTrackCache)
   }
@@ -64,7 +68,6 @@ class LabelTrack extends Label {
    * @return codis数据库的key
    */
   override def getQryKeys(line: Map[String, String]): Set[String] = Set[String]("lacci2area:" + line("lac") + ":" + line("ci"))
-
 
   def rad(d: Double): Double = {
     d * Math.PI / 180.0
