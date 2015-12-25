@@ -45,7 +45,6 @@ class DataInterfaceServer extends Logging with Serializable {
       propsMap.foreach(kvMap => {
         if (!kvMap.isEmpty) conf.set(kvMap.get("pname").get, kvMap.get("pvalue").get)
       })
-
     }
     conf
   }
@@ -104,15 +103,34 @@ class DataInterfaceServer extends Logging with Serializable {
       labelarr += label
     })
 
-    labelarr.sortWith((l1, l2) => {
-      val i1 = l1.conf.getId
-      val p1 = l1.conf.getPlabelId
-      val i2 = l2.conf.getId
-      val p2 = l2.conf.getPlabelId
-      p1.equals(i2) || p2.equals(i1) || i1.compareTo(i2) < 0
-    }).toArray
+    //根据标签的依赖关系排序
+    val labelIDMap = labelarr.map(label => (label.conf.id, label)).toMap
+    val resultArray = ArrayBuffer[String]()
+    labelarr.foreach(label => labelSort(label.conf.id, resultArray, labelIDMap))
+    val result = ArrayBuffer[Label]()
+    resultArray.foreach(id => {
+      result += labelIDMap(id)
+    })
+    result.toArray
+
+//    labelarr.sortWith((l1, l2) => {
+//      val i1 = l1.conf.getId
+//      val p1 = l1.conf.getPlabelId
+//      val i2 = l2.conf.getId
+//      val p2 = l2.conf.getPlabelId
+//      p1.equals(i2) || p2.equals(i1) || i1.compareTo(i2) < 0
+//    }).toArray
   }
 
+  /**
+   * 根据标签的信赖关系排序
+   */
+  def labelSort(labelId: String, result: ArrayBuffer[String], map: scala.collection.immutable.Map[String,Label]) {
+    val pid = map(labelId).conf.plabelId
+    if (pid != null && pid.trim != "") labelSort(pid, result, map)
+    if (!result.contains(labelId)) result += labelId
+  }
+  
   def getEventsByIFId(id: String): Array[Event] = {
     /*val sql = "select id, name, select_expr, filter_expr, p_event_id, properties " +
       "from " + TableInfoConstant.EventTableName +
@@ -145,7 +163,7 @@ class DataInterfaceServer extends Logging with Serializable {
 
       //TODO send_interval should bound on dataInterface, now just one di , so set the last value
       var send_interval = 0
-      var delim =","
+      var delim = ","
       outputIFIdsArrMap.foreach(kvMap => {
         val diid = kvMap.get("diid").get
         // 加载Interface内容
@@ -160,7 +178,6 @@ class DataInterfaceServer extends Logging with Serializable {
       event.init(conf)
       eventarr += event
     })
-
     eventarr.sortWith((e1, e2) => {
       val i1 = e1.conf.id
       val p1 = e1.conf.p_event_id
