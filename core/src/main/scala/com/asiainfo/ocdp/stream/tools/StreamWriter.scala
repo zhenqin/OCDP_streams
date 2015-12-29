@@ -1,13 +1,12 @@
 package com.asiainfo.ocdp.stream.tools
 
 import java.util.Properties
-
 import com.asiainfo.ocdp.stream.config.{ DataInterfaceConf, EventConf }
 import kafka.producer.KeyedMessage
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{ DataFrame, SaveMode }
-
 import scala.collection.mutable.ArrayBuffer
+import java.text.SimpleDateFormat
 
 /**
  * Created by surq on 12/09/15
@@ -73,11 +72,16 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
   def push(rdd: RDD[String], conf: EventConf, uniqKeys: String)= setMessage(rdd, conf, uniqKeys).count
   def push(df: DataFrame, conf: EventConf, uniqKeys: String) = setMessage(df.toJSON, conf, uniqKeys).count
 
+  
+  // 向kafka发送数据的未尾字段加当前时间
+  val dateFormat = "yyyyMMdd HH:mm:ss.SSS"
+  val sdf =  new SimpleDateFormat(dateFormat)
   /**
    * 向kafka发送数据
    */
   
   def setMessage(jsonRDD: RDD[String], conf: EventConf, uniqKeys: String) = {
+    
     var fildList = conf.select_expr.split(",")
     if (conf.get("ext_fields", null) != null && conf.get("ext_fields") != "") {
       val fields = conf.get("ext_fields").split(",").map(ext => (ext.split("as"))(1).trim)
@@ -93,7 +97,9 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
         {
           val key = line._1
           val msg_json = line._2
-          val msg = Json4sUtils.jsonStr2String(msg_json, fildList, delim)
+          val msg_head = Json4sUtils.jsonStr2String(msg_json, fildList, delim)
+          // 加入当前msg输出时间戳
+          val msg = msg_head + delim + sdf.format(System.currentTimeMillis)
           if (key == null) messages.append(new KeyedMessage[String, String](topic, msg))
           else messages.append(new KeyedMessage[String, String](topic, key, msg))
           key

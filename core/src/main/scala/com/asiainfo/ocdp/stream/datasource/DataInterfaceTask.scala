@@ -62,8 +62,8 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
         val dataFrame = sqlc.createDataFrame(rowRDD, schema)
         val t2 = System.currentTimeMillis
         println("2.rowRDD 转换成 DataFrame 耗时 (millis):" + (t2 - t1))
-        val filter_expr = conf.get("filter_expr").trim()
-        val mixDF = if (filter_expr != "") dataFrame.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
+        val filter_expr = conf.get("filter_expr")
+        val mixDF = if (filter_expr != null && filter_expr.trim != "") dataFrame.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
         else dataFrame.selectExpr(allItemsSchema.fieldNames: _*)
         val t3 = System.currentTimeMillis
         println("3.DataFrame 最初过滤不规则数据耗时 (millis):" + (t3 - t2))
@@ -76,7 +76,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
 
         val t5 = System.currentTimeMillis
         println("5.RDD 转换成 DataFrame 耗时(millis):" + (t5 - t4))
-        
+
         makeEvents(enhancedDF, conf.get("uniqKeys"))
         println("6.所有业务营销 耗时(millis):" + (System.currentTimeMillis - t5))
       }
@@ -229,7 +229,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
       val qryCacheService = new ExecutorCompletionService[List[(String, Array[Byte])]](CacheQryThreadPool.threadPool)
       val hgetAllService = new ExecutorCompletionService[Seq[(String, java.util.Map[String, String])]](CacheQryThreadPool.threadPool)
       // 装载整个批次事件计算中间结果缓存值　label:uk -> 每条信令用map装载
-      val busnessKeyList = mutable.Map[String, Map[String, String]]()
+      val busnessKeyList = ArrayBuffer[(String, Map[String, String])]()
       // 装载整个批次打标签操作时，所需要的跟codis数据库交互的key
       val labelQryKeysSet = mutable.Set[String]()
       val cachemap_new = mutable.Map[String, Any]()
@@ -247,7 +247,7 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
       // cachemap_old
       val f1 = System.currentTimeMillis()
       var cachemap_old: Map[String, Any] = null
-      val keyList = busnessKeyList.keys.toList
+      val keyList = busnessKeyList.map(line => line._1).toList
       val batchSize = keyList.size
       println("本批次记录条数：" + batchSize)
       try {
@@ -309,8 +309,8 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
    */
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
     println(" Begin exec evets : " + System.currentTimeMillis())
-        df.persist
-        events.map(event => event.buildEvent(df, uniqKeys))
-        df.unpersist
+    df.persist
+    events.map(event => event.buildEvent(df, uniqKeys))
+    df.unpersist
   }
 }

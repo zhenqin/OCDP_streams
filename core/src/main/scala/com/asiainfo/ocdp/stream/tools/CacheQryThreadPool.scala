@@ -162,8 +162,8 @@ class InsertHash(value: Map[String, Map[String, String]]) extends Callable[Strin
 
 /**
  * 存储各业务的结果（等待event复用）
- * value: hset: ( eventCache:unikey1:unikey2,Row:eventId:eventID,json)
- * key: eventCache:unikey1:unikey2 item: Row:eventId:eventID value: json
+ * value: hset: ( eventCache:unikey1:unikey2,Row:eventId:eventID,time)
+ * key: eventCache:unikey1:unikey2 item: Row:eventId:eventID value: time
  */
 class InsertEventRows(value: Array[(String, String, String)]) extends Runnable {
   val logger = LoggerFactory.getLogger(this.getClass)
@@ -180,7 +180,6 @@ class InsertEventRows(value: Array[(String, String, String)]) extends Runnable {
         logger.error("= = " * 15 + "found error in InsertEventRows.call()")
     } finally {
       conn.close()
-//      println("InsertEventRows " + value.size + " key cost " + (System.currentTimeMillis() - t1) + " Millis")
     }
   }
 }
@@ -237,27 +236,32 @@ class InsertEventRows(value: Array[(String, String, String)]) extends Runnable {
  */
 class QryEventCache(value: Array[(String, String)], eventId: String) extends Callable[immutable.Map[String, (String, Array[Byte])]] {
   val logger = LoggerFactory.getLogger(this.getClass)
-
+//  import scala.collection.JavaConverters._
   override def call() = {
     val conn = CacheFactory.getManager.asInstanceOf[CodisCacheManager].getResource
 
     // 营销业务ID
-    val fields = eventId
+    val event_id = eventId
     // 装载本批次所有codis key
     val rowKeyList = ArrayBuffer[String]()
     // 装载本批次数据json格式
     val jsonList = ArrayBuffer[String]()
     var resultZip: immutable.Map[String, (String, Array[Byte])] = null
     try {
-      val pgl = conn.pipelined()
+      val pipline = conn.pipelined()
       value.foreach(elem => {
         val rowKey = elem._1
         rowKeyList += rowKey
         jsonList += elem._2
-        pgl.hmget(rowKey.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET), fields.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET))
+        pipline.hmget(rowKey.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET), event_id.getBytes(CacheQryThreadPool.DEFAULT_CHARACTER_SET))
       })
-      val result = pgl.syncAndReturnAll().head.asInstanceOf[JList[Array[Byte]]]
-      resultZip = (rowKeyList.zip(jsonList.zip(result))).toMap
+      // syncAndReturnAll:hmget结果值是用list存储的，把所有items结果存储为list
+      val resultJava = pipline.syncAndReturnAll
+      if (resultJava == null || resultJava.size == 0) resultZip  else {
+        val result = resultJava.map(e => {val items =e.asInstanceOf[JList[Array[Byte]]];items(0)})
+        resultZip = (rowKeyList.zip(jsonList.zip(result))).toMap
+      }
+
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in QryEventCache.call()")

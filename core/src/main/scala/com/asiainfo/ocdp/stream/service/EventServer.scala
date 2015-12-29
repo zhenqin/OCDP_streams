@@ -56,6 +56,7 @@ class EventServer extends Logging with Serializable {
    */
   def getEventCache(eventCacheService:ExecutorCompletionService[immutable.Map[String, (String, Array[Byte])]],
       batchList: Array[Array[(String, String)]], eventId: String, interval: Int): List[String] = {
+    import scala.collection.JavaConversions
     // 满足周期输出的key 和json 。outPutJsonMap :Map[key->json]
     val outPutJsonMap = Map[String, String]()
     batchList.foreach(batch => eventCacheService.submit(new QryEventCache(batch, eventId)))
