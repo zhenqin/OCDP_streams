@@ -1,10 +1,10 @@
 package com.asiainfo.ocdp.stream.manager
 
-import java.util.{Timer, TimerTask}
-import akka.actor.{ActorSystem, Props}
+import java.util.{ Timer, TimerTask }
+import akka.actor.{ ActorSystem, Props }
 import com.asiainfo.ocdp.stream.common.Logging
-import com.asiainfo.ocdp.stream.config.{MainFrameConf, TaskConf}
-import com.asiainfo.ocdp.stream.constant.{CommonConstant, TaskConstant}
+import com.asiainfo.ocdp.stream.config.{ MainFrameConf, TaskConf }
+import com.asiainfo.ocdp.stream.constant.{ CommonConstant, TaskConstant }
 import com.asiainfo.ocdp.stream.service.TaskServer
 import scala.collection.mutable
 
@@ -18,15 +18,25 @@ object MainFrameManager extends Logging {
   val periodSeconds = MainFrameConf.systemProps.getInt("periodSeconds", 30)
   val startTimeOutSeconds = MainFrameConf.systemProps.getInt("startTimeOutSeconds", 120)
 
+  // 对表STREAM_TASK的务服句柄
   val taskServer = new TaskServer()
 
+  // getStatus:0 停止 1 启动中 2运行中 3停止中
+  // 装载taskConf.getStatus=１的taskID和系统时间
   val pre_start_tasks = mutable.Map[String, Long]()
+  // 装载taskConf.getStatus=3的taskID和系统时间
   val pre_stop_tasks = mutable.Map[String, Long]()
+
   val current_time = System.currentTimeMillis()
+  
+  
   taskServer.getAllTaskInfos().foreach(taskConf => {
     if (taskConf.getStatus == TaskConstant.PRE_START)
       pre_start_tasks.put(taskConf.getId, current_time)
   })
+
+  //taskServer.getAllTaskInfos.filter(taskConf => taskConf.getStatus == TaskConstant.PRE_START).
+  //map(taskConf => pre_start_tasks +=(taskConf.getId -> current_time))
 
   // Create an Akka system
   val system = ActorSystem("TaskSystem")
@@ -38,7 +48,8 @@ object MainFrameManager extends Logging {
       try {
         buildTask()
       } catch {
-        case e: Exception => logError("Error start new app ", e)
+        case e: Exception =>
+          logError("Error start new app ", e)
           waiter.notifyStop()
       }
     }
@@ -120,7 +131,7 @@ object MainFrameManager extends Logging {
     // modify by surq at 2015.10.21 start
     // val deploy_mode = " --deploy-mode cluster"
     val deploy_mode = " --deploy-mode client"
-      
+
     // spark-submit files 参数追加
     var files = ""
     val files_conf = MainFrameConf.systemProps.getOption("files")
