@@ -86,7 +86,7 @@ class TermRule extends Label{
   override def getQryKeys(line: Map[String, String]): Set[String] =
     Set[String](line("callingimei"), line("calledimei")).
       filterNot(value => {
-      value == null || value== "" || value == "000000000000000"
+      value.length < 8 || value == null || value == "000000000000000"
     }).map("terminfo:" + _)
 
 
