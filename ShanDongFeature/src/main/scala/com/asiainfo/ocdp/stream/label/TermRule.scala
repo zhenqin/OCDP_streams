@@ -16,59 +16,79 @@ class TermRule extends Label{
   //终端信息(codis)前缀
   val info_sine = "terminfo_"
   override def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache) = {
-    // 初始化用户定义需求标签值""
-    val lebleLine = fieldsMap()
-    // 用户定义需求标签字段
-    val conf_lable_items = conf.getFields
-    // 根据largeCell解析出所属区域
-    val cachedArea = labelQryData.get(getQryKeys(line).head).get
 
-    // 用户定义区域信息标签集合
-    val conf_lable_info_items = conf_lable_items.filter(item => if (item.startsWith(info_sine)) true else false)
+    val normal_imei = line("imei").substring(5)
 
-    // 标记业务区域标签： 如果codis中，存在item为areas的字段，则取其相关区域
-    if (cachedArea.contains(LabelConstant.LABEL_AREA_LIST_KEY)) {
-      // 从codis中取区域
-      val areas = cachedArea(LabelConstant.LABEL_AREA_LIST_KEY).trim()
-      if (areas != null && areas != "") {
-        // 信令所在区域列表
-        val areasList = areas.split(",")
-        // 只打信令所在区域中要指定的那些区域字段
-        areasList.foreach(area => {
-          // 添加区域标签前缀
-          val labelKey = type_sine + area.trim
-          // 在用户定义标签范围内则打标签
-          if (conf_lable_items.contains(labelKey)) {
-            // 打区域标签
-            lebleLine.update(labelKey, "true")
+    val info_cols = conf.get("term_info_cols").split(",")
+    val qryKeys = getQryKeys(line)
+
+    var fieldMap = fieldsMap()
+
+    if (qryKeys.size == 0) {
+      // do nothing
+    } else if (qryKeys.size == 1) {
+      //其中一个imei无效
+      val qryKey = qryKeys.head
+      val userKey = qryKey.split(":")(1).substring(5)
+      val term_info_map = labelQryData.get(qryKey).get
+
+      if (userKey == normal_imei) {
+        //常规业务的用户标签:由term_info_cols配置，逗号分隔
+        info_cols.foreach(labelName => {
+          term_info_map.get(labelName) match {
+            case Some(value) =>
+              fieldMap += (labelName -> value)
+            case None =>
           }
         })
+      } else {
+        // do nothing
       }
+    } else if (qryKeys.size == 2) {
+
+      //常规业务用户标签
+      val term_info_map = labelQryData.getOrElse("terminfo:" + normal_imei, Map[String, String]())
+
+      info_cols.foreach(labelName => {
+        term_info_map.get(labelName) match {
+          case Some(value) => fieldMap += (labelName -> value)
+          case None =>
+          //发现：现场环境有很多 userinfo:normal_imsi 在redis中没有cache信息，也可能是外地用户，故取消executor日志打印
+          //            logger.debug("= = " * 15 +"in UserBaseInfoRule, got null from labelQryData for key field  = userinfo:" + normal_imsi +" " + labelName)
+        }
+      })
+      qryKeys.foreach(qryKey => {
+        val userKey = qryKey.split(":")(1).substring(5)
+        val term_info_map = labelQryData.get(qryKey).get
+
+        //特殊业务的用户标签
+        if (userKey != normal_imei) {
+          //特殊业务的用户标签:在常规业务标签上加前缀
+          info_cols.foreach(labelName => {
+            term_info_map.get(labelName) match {
+              case Some(value) =>
+                fieldMap += (if (userKey == line("calledimsi")) ("called_" + labelName -> value) else ("calling_" + labelName -> value))
+              case None =>
+            }
+          })
+        } else {
+          // do nothing
+        }
+      })
+    } else {
+      // do nothing
     }
 
-    // 打区域信息标签
-    conf_lable_info_items.foreach(info => {
-      // 去除［areainfo_］前缀
-      val prop = info.substring(9)
-      lebleLine.update(info, cachedArea.getOrElse(prop, ""))
-    })
+    //    line.foreach(fieldMap.+(_))
+    fieldMap ++= line
 
-    //    // 标记行政区域标签
-    //    // 20150727 新增上下班业务标签 labels['area_info']['lac_ci']
-    //    val areainfo_data = cachedArea.filter(_._1 != LabelConstant.LABEL_AREA_LIST_KEY).map(x => (info_sine + x._1 -> x._2))
-    //    // 所打标签集合
-    //     newLine = newLine ++ areainfo_data
-    //     // 已打标签集合
-    //     val labelKey = newLine.keys.toList
-    //     conf.getFields.foreach(labelField => if (!labelField.contains(labelField)) newLine += (labelField ->""))
-
-    lebleLine ++= line
-    (lebleLine.toMap, cache)
+    (fieldMap.toMap, cache)
   }
 
-  /**
-   * @param line:MC信令对像
-   * @return codis数据库的key
-   */
-  override def getQryKeys(line: Map[String, String]): Set[String] = Set[String]("terminfo:" + line("lac") + ":" + line("ci"))
+  override def getQryKeys(line: Map[String, String]): Set[String] =
+    Set[String](line("callingimei"), line("calledimei")).
+      filterNot(value => {
+      value == null || value == "000000000000000"
+    }).map("terminfo:" + _)
+
 }
