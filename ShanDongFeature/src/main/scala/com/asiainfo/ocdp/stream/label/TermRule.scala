@@ -17,70 +17,79 @@ class TermRule extends Label{
   val info_sine = "terminfo_"
   override def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache) = {
 
-    val normal_imei = line("imei").substring(0,8)
-
-    val info_cols = conf.get("term_info_cols").split(",")
-    val qryKeys = getQryKeys(line)
-
+    var normal_imei = line("imei")
     var fieldMap = fieldsMap()
 
-    if (qryKeys.size == 0) {
-      // do nothing
-    } else if (qryKeys.size == 1) {
-      //其中一个imei无效
-      val qryKey = qryKeys.head
-      val userKey = qryKey.split(":")(1).substring(0,8)
-      val term_info_map = labelQryData.get(qryKey).get
 
-      if (userKey == normal_imei) {
-        //常规业务的用户标签:由term_info_cols配置，逗号分隔
-        info_cols.foreach(labelName => {
-          term_info_map.get(labelName) match {
-            case Some(value) =>
-              fieldMap += (labelName -> value)
-            case None =>
-          }
-        })
-      } else {
+    if(normal_imei.length() < 8){
+      //do nothing
+    }
+    else {
+      normal_imei = line("imei")
+
+      val info_cols = conf.get("term_info_cols").split(",")
+      val qryKeys = getQryKeys(line)
+
+
+
+      if (qryKeys.size == 0) {
         // do nothing
-      }
-    } else if (qryKeys.size == 2) {
-
-      //常规业务用户标签
-      val term_info_map = labelQryData.getOrElse("terminfo:" + normal_imei, Map[String, String]())
-
-      info_cols.foreach(labelName => {
-        term_info_map.get(labelName) match {
-          case Some(value) => fieldMap += (labelName -> value)
-          case None =>
-       }
-      })
-      qryKeys.foreach(qryKey => {
-        val userKey = qryKey.split(":")(1).substring(0,8)
+      } else if (qryKeys.size == 1) {
+        //其中一个imei无效
+        val qryKey = qryKeys.head
+        val userKey = qryKey.split(":")(1).substring(0, 8)
         val term_info_map = labelQryData.get(qryKey).get
 
-        //主叫被叫终端信息标签
-        if (userKey != normal_imei) {
-          //特殊业务的用户标签:在常规业务标签上加前缀
+        if (userKey == normal_imei) {
+          //常规业务的用户标签:由term_info_cols配置，逗号分隔
           info_cols.foreach(labelName => {
             term_info_map.get(labelName) match {
               case Some(value) =>
-                fieldMap += (if (userKey == line("calledimei")) ("called_" + labelName -> value) else ("calling_" + labelName -> value))
+                fieldMap += (labelName -> value)
               case None =>
             }
           })
         } else {
           // do nothing
         }
-      })
-    } else {
-      // do nothing
+      } else if (qryKeys.size == 2) {
+
+        //常规业务用户标签
+        val term_info_map = labelQryData.getOrElse("terminfo:" + normal_imei, Map[String, String]())
+
+        info_cols.foreach(labelName => {
+          term_info_map.get(labelName) match {
+            case Some(value) => fieldMap += (labelName -> value)
+            case None =>
+          }
+        })
+        qryKeys.foreach(qryKey => {
+          val userKey = qryKey.split(":")(1).substring(0, 8)
+          val term_info_map = labelQryData.get(qryKey).get
+
+          //主叫被叫终端信息标签
+          if (userKey != normal_imei) {
+            //特殊业务的用户标签:在常规业务标签上加前缀
+            info_cols.foreach(labelName => {
+              term_info_map.get(labelName) match {
+                case Some(value) =>
+                  fieldMap += (if (userKey == line("calledimei")) ("called_" + labelName -> value) else ("calling_" + labelName -> value))
+                case None =>
+              }
+            })
+          } else {
+            // do nothing
+          }
+        })
+      } else {
+        // do nothing
+      }
+
+      //    line.foreach(fieldMap.+(_))
+      fieldMap ++= line
     }
+      (fieldMap.toMap, cache)
 
-    //    line.foreach(fieldMap.+(_))
-    fieldMap ++= line
-
-    (fieldMap.toMap, cache)
   }
 
   override def getQryKeys(line: Map[String, String]): Set[String] =
