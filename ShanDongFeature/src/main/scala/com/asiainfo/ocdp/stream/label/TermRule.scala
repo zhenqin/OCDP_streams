@@ -17,7 +17,7 @@ class TermRule extends Label{
   val info_sine = "terminfo_"
   override def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache) = {
 
-    val normal_imei = line("imei").substring(5)
+    val normal_imei = line("imei").substring(0,8)
 
     val info_cols = conf.get("term_info_cols").split(",")
     val qryKeys = getQryKeys(line)
@@ -29,7 +29,7 @@ class TermRule extends Label{
     } else if (qryKeys.size == 1) {
       //其中一个imei无效
       val qryKey = qryKeys.head
-      val userKey = qryKey.split(":")(1).substring(5)
+      val userKey = qryKey.split(":")(1).substring(0,8)
       val term_info_map = labelQryData.get(qryKey).get
 
       if (userKey == normal_imei) {
@@ -56,7 +56,7 @@ class TermRule extends Label{
        }
       })
       qryKeys.foreach(qryKey => {
-        val userKey = qryKey.split(":")(1).substring(5)
+        val userKey = qryKey.split(":")(1).substring(0,8)
         val term_info_map = labelQryData.get(qryKey).get
 
         //主叫被叫终端信息标签
@@ -86,7 +86,8 @@ class TermRule extends Label{
   override def getQryKeys(line: Map[String, String]): Set[String] =
     Set[String](line("callingimei"), line("calledimei")).
       filterNot(value => {
-      value == null || value == "000000000000000"
+      value == null || value== "" || value == "000000000000000"
     }).map("terminfo:" + _)
+
 
 }
