@@ -53,21 +53,19 @@ class TermRule extends Label{
         term_info_map.get(labelName) match {
           case Some(value) => fieldMap += (labelName -> value)
           case None =>
-          //发现：现场环境有很多 userinfo:normal_imsi 在redis中没有cache信息，也可能是外地用户，故取消executor日志打印
-          //            logger.debug("= = " * 15 +"in UserBaseInfoRule, got null from labelQryData for key field  = userinfo:" + normal_imsi +" " + labelName)
-        }
+       }
       })
       qryKeys.foreach(qryKey => {
         val userKey = qryKey.split(":")(1).substring(5)
         val term_info_map = labelQryData.get(qryKey).get
 
-        //特殊业务的用户标签
+        //主叫被叫终端信息标签
         if (userKey != normal_imei) {
           //特殊业务的用户标签:在常规业务标签上加前缀
           info_cols.foreach(labelName => {
             term_info_map.get(labelName) match {
               case Some(value) =>
-                fieldMap += (if (userKey == line("calledimsi")) ("called_" + labelName -> value) else ("calling_" + labelName -> value))
+                fieldMap += (if (userKey == line("calledimei")) ("called_" + labelName -> value) else ("calling_" + labelName -> value))
               case None =>
             }
           })
