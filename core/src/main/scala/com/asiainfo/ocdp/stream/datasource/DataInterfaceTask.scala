@@ -1,33 +1,33 @@
 package com.asiainfo.ocdp.stream.datasource
 
-import com.asiainfo.ocdp.stream.common.StreamingCache
-import com.asiainfo.ocdp.stream.config.MainFrameConf
-import com.asiainfo.ocdp.stream.event.Event
-import com.asiainfo.ocdp.stream.manager.StreamTask
-import com.asiainfo.ocdp.stream.service.DataInterfaceServer
-import com.asiainfo.ocdp.stream.tools.{ CacheFactory, Json4sUtils }
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{ DataFrame, Row, SQLContext }
-import org.apache.spark.streaming.StreamingContext
-import org.apache.spark.streaming.dstream.DStream
-import scala.collection.mutable.ArrayBuffer
-import scala.collection.{ mutable, immutable }
-import org.apache.spark.rdd.RDD
 import java.text.SimpleDateFormat
 import java.util.concurrent.ExecutorCompletionService
-import com.asiainfo.ocdp.stream.tools.CacheQryThreadPool
-import java.util.concurrent.Callable
+
+import com.asiainfo.ocdp.stream.common.StreamingCache
+import com.asiainfo.ocdp.stream.config.DataInterfaceConf
+import com.asiainfo.ocdp.stream.event.Event
+import com.asiainfo.ocdp.stream.label.Label
+import com.asiainfo.ocdp.stream.manager.StreamTask
+import com.asiainfo.ocdp.stream.tools.{CacheFactory, CacheQryThreadPool, Json4sUtils}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.streaming.StreamingContext
+import org.apache.spark.streaming.dstream.DStream
+
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.{immutable, mutable}
 
 /**
  * Created by surq on 12/09/15
  */
-class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
+class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labels: Array[Label], events: Array[Event]) extends StreamTask {
 
-  val dataInterfaceService = new DataInterfaceServer
-
-  val conf = dataInterfaceService.getDataInterfaceInfoById(id)
-  val labels = dataInterfaceService.getLabelsByIFId(id)
-  val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
+//  val dataInterfaceService = new DataInterfaceServer
+//
+//  val conf = dataInterfaceService.getDataInterfaceInfoById(id)
+//  val labels = dataInterfaceService.getLabelsByIFId(id)
+//  val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
   conf.setInterval(interval)
   // 原始信令字段个数
   val baseItemSize = conf.getBaseItemsSize
@@ -226,8 +226,10 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
    */
   def execLabels(df: DataFrame): RDD[String] = {
     df.toJSON.mapPartitions(iter => {
+      //todo Rayn: 为什么初始化qryCacheService 链接需要在这个方法里面？这个对象不能重复利用吗？
       val qryCacheService = new ExecutorCompletionService[List[(String, Array[Byte])]](CacheQryThreadPool.threadPool)
       val hgetAllService = new ExecutorCompletionService[Seq[(String, java.util.Map[String, String])]](CacheQryThreadPool.threadPool)
+
       // 装载整个批次事件计算中间结果缓存值　label:uk -> 每条信令用map装载
       val busnessKeyList = ArrayBuffer[(String, Map[String, String])]()
       // 装载整个批次打标签操作时，所需要的跟codis数据库交互的key
