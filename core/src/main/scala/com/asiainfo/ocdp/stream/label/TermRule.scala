@@ -20,6 +20,7 @@ class TermRule extends Label{
     var fieldMap = fieldsMap()
 
 
+    //TODO 这个判断没用，为什么还要加上判断？
     if(normal_imei.length() < 8){
       //do nothing
     }
@@ -31,6 +32,7 @@ class TermRule extends Label{
 
 
 
+      //TODO 为什么不定义一个变量，而是每次都去取值。
       if (qryKeys.size == 0) {
         // do nothing
       } else if (qryKeys.size == 1) {

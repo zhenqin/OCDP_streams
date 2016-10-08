@@ -42,7 +42,8 @@ class CodisCacheManager extends RedisCacheManager {
 //          rip = proxylist(proxyid).split(":")(1)
 //      }
       // deleted by surq at 2015.11.16 end     
-      // added by surq at 2015.11.16 start     
+      // added by surq at 2015.11.16 start
+	    //TODO 随机选择代理是否会有瓶颈？是否可以设置均匀的选择代理
        val proxyid  = new java.util.Random().nextInt(proxylist.size)
        val proxyInfo =proxylist(proxyid).split(":")
        val rhost = proxyInfo(0)

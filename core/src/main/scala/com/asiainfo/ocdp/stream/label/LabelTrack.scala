@@ -9,7 +9,7 @@ import scala.collection.mutable
  * Created by tsingfu on 15/9/14.
  */
 class LabelTrack extends Label {
-  //  def attachMCLabel(mcLogRow: Row, cache: StreamingCache, labelQryData: Map[String, Map[String, String]]): StreamingCache
+
   override def attachLabel(line: Map[String, String], cache: StreamingCache, labelQryData: mutable.Map[String, mutable.Map[String, String]]): (Map[String, String], StreamingCache) = {
 
     //获取cache

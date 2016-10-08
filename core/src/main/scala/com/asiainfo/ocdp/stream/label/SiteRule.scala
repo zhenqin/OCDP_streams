@@ -27,6 +27,7 @@ class SiteRule extends Label {
     // 用户定义区域信息标签集合
     val conf_lable_info_items = conf_lable_items.filter(item => if (item.startsWith(info_sine)) true else false)
 
+    //TODO 为什么必须要判断两次
     // 标记业务区域标签： 如果codis中，存在item为areas的字段，则取其相关区域
     if (cachedArea.contains(LabelConstant.LABEL_AREA_LIST_KEY)) {
       // 从codis中取区域

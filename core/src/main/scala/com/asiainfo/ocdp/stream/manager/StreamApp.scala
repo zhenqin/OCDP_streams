@@ -16,20 +16,21 @@ object StreamApp extends Logging {
   val taskServer = new TaskServer
 
   def main(args: Array[String]) {
-
+/*
     if (args.length < 1) {
       //      System.err.println("usage:  ./bin/spark-class com.asiainfo.ocdc.stream.mainframe [taskId]")
       System.exit(1)
-    }
+    }*/
 
-    val taskId = args(0)
+
+    val taskId = "1"
 
     val taskConf = taskServer.getTaskInfoById(taskId)
 
     //1 初始化 streamingContext
     val sparkConf = new SparkConf().setAppName(taskConf.getName)
     // modify by surq at 2015.10.21 start
-    // sparkConf.setMaster("local[2]")
+    sparkConf.setMaster("local[2]")
     // sparkConf.setAppName("local")
     sparkConf.setAppName("OCDP_Streaming")
     // modify by surq at 2015.10.21 end
