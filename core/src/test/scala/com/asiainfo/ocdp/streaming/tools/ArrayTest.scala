@@ -7,6 +7,9 @@ import scala.collection.mutable.ArrayBuffer
  */
 object ArrayTest {
   def main(args: Array[String]) {
+
+
+
     val a = ArrayBuffer[(String,String)]()
 
     a += (("9", "5"))
