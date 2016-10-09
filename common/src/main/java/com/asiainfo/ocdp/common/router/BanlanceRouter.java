@@ -20,39 +20,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * @author zhenqin
  */
-public class BanlanceRouter extends Router {
+public class BanlanceRouter extends Router implements Comparator<HostAndCouter> {
 
 
-    class HostAndCouter {
-        private String host;
-        private AtomicInteger counter = new AtomicInteger(0);
 
-
-        public HostAndCouter(String host) {
-            this.host = host;
-        }
-
-
-        public int getCounter() {
-            return counter.get();
-        }
-
-        public int incrementAndGet() {
-            return counter.incrementAndGet();
-        }
-
-        public int decrementAndGet() {
-            return counter.decrementAndGet();
-        }
-
-        public int intValue() {
-            return counter.intValue();
-        }
-
-        public String getHost() {
-            return host;
-        }
-    }
     protected final LinkedList<HostAndCouter> list = new LinkedList<HostAndCouter>();
 
     public BanlanceRouter(String cacheManagers){
@@ -63,15 +34,47 @@ public class BanlanceRouter extends Router {
     }
 
     @Override
+    public int compare(HostAndCouter o1, HostAndCouter o2) {
+        return o1.getCounter() - o2.getCounter();
+    }
+
+    @Override
     public String getProxyHost(String host) {
-        Collections.sort(this.list, new Comparator<HostAndCouter>() {
-            @Override
-            public int compare(HostAndCouter o1, HostAndCouter o2) {
-                return o1.getCounter() - o2.getCounter();
-            }
-        });
+        Collections.sort(this.list, this);
         HostAndCouter first = this.list.getFirst();
         first.incrementAndGet();
-        return first.host;
+        return first.getHost();
+    }
+
+}
+
+class HostAndCouter {
+    private String host;
+    private AtomicInteger counter = new AtomicInteger(0);
+
+
+    public HostAndCouter(String host) {
+        this.host = host;
+    }
+
+
+    public int getCounter() {
+        return counter.get();
+    }
+
+    public int incrementAndGet() {
+        return counter.incrementAndGet();
+    }
+
+    public int decrementAndGet() {
+        return counter.decrementAndGet();
+    }
+
+    public int intValue() {
+        return counter.intValue();
+    }
+
+    public String getHost() {
+        return host;
     }
 }
