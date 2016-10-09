@@ -103,7 +103,6 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
    */
   def execLabels(df: DataFrame): RDD[String] = {
     df.toJSON.mapPartitions(iter => {
-      //todo Rayn: 为什么初始化qryCacheService 链接需要在这个方法里面？这个对象不能重复利用吗？
       val qryCacheService = new ExecutorCompletionService[List[(String, Array[Byte])]](CacheQryThreadPool.threadPool)
       val hgetAllService = new ExecutorCompletionService[Seq[(String, java.util.Map[String, String])]](CacheQryThreadPool.threadPool)
 
