@@ -1,0 +1,65 @@
+@namespace("com.asiainfo.ocdp.common.protocol")
+/**
+ 山东流处理，中间接口
+ */
+protocol OcdpHubProtocol {
+
+    /**
+    传输的抓取 Task 消息, 序列化结果
+    */
+    record FetchTask {
+        /**
+        Task ID
+        */
+        string taskId;
+
+        /**
+        Server Message
+        */
+        string message;
+
+        /**
+        下载 task 是否成功
+        */
+        boolean success;
+
+        /**
+        Task Parameter
+        */
+        union{map<string>, null} params;
+    }
+
+    /**
+    传输的抓取结果 Task 消息, 序列化结果
+    */
+    record FetchResponse {
+        /**
+        Task ID
+        */
+        string taskId;
+
+        /**
+        Server Message
+        */
+        union{string, null} exrror;
+
+        /**
+        是否抓取成功, 状态码
+        */
+        int statusCode;
+    }
+
+
+    /**
+      获取 Codis 代理 Host，分发逻辑可为多种：随机，均衡，最近距离
+     */
+    string getProxyHost(string host);
+
+
+    /**
+      获取数据库配置参数
+     */
+    map<string> getSysConf(string cond);
+
+
+}
