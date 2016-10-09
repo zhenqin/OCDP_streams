@@ -1,5 +1,6 @@
 package com.asiainfo.ocdp.common.protocol;
 
+import com.asiainfo.ocdp.common.router.Router;
 import org.apache.avro.AvroRemoteException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,12 @@ import java.util.*;
 public class OcdpHubServerProtocolImpl implements OcdpHubProtocol {
 
 
+    private final Router router;
+
+
+    public OcdpHubServerProtocolImpl(Router router) {
+        this.router = router;
+    }
 
     /**
      * LOG
@@ -31,11 +38,16 @@ public class OcdpHubServerProtocolImpl implements OcdpHubProtocol {
 
     @Override
     public CharSequence getProxyHost(CharSequence host) throws AvroRemoteException {
-        return null;
+        return router.getProxyHost(host.toString());
     }
 
     @Override
     public Map<CharSequence, CharSequence> getSysConf(CharSequence cond) throws AvroRemoteException {
         return null;
+    }
+
+
+    public Router getRouter() {
+        return router;
     }
 }

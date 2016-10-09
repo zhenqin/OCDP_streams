@@ -1,5 +1,6 @@
 package com.asiainfo.ocdp.common.protocol;
 
+import com.asiainfo.ocdp.common.router.BanlanceRouter;
 import com.asiainfo.ocdp.common.util.NetworkUtils;
 import org.apache.avro.ipc.NettyServer;
 import org.apache.avro.ipc.Server;
@@ -116,7 +117,7 @@ public class OcdpHubSocketServer extends SpecificResponder {
 
     public static void main(String[] args) throws Exception {
         OcdpHubSocketServer server = new OcdpHubSocketServer(OcdpHubProtocol.class,
-                new OcdpHubServerProtocolImpl());
+                new OcdpHubServerProtocolImpl(new BanlanceRouter("s1:6379,s2:6379,s3:6379,s4:6379,s5:6379")));
         server.setDaemon(false);
         server.setHost(NetworkUtils.getLocalhostName());
         server.setPort(3245);
