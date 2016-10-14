@@ -12,6 +12,7 @@ import com.asiainfo.ocdp.stream.tools.{CacheFactory, CacheQryThreadPool, Json4sU
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
@@ -54,15 +55,25 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
       if (rowRDD.partitions.size > 0) {
         val t1 = System.currentTimeMillis()
         println("1.kafka RDD 转换成 rowRDD 耗时 (millis):" + (t1 - t0))
+
         val dataFrame = sqlc.createDataFrame(rowRDD, schema)
+
         val t2 = System.currentTimeMillis
         println("2.rowRDD 转换成 DataFrame 耗时 (millis):" + (t2 - t1))
         val filter_expr = conf.get("filter_expr")
+
         val mixDF = if (filter_expr != null && filter_expr.trim != "") dataFrame.selectExpr(allItemsSchema.fieldNames: _*).filter(filter_expr)
         else dataFrame.selectExpr(allItemsSchema.fieldNames: _*)
+
+
         val t3 = System.currentTimeMillis
         println("3.DataFrame 最初过滤不规则数据耗时 (millis):" + (t3 - t2))
         val labelRDD = execLabels(mixDF)
+
+        //-------------------持久化 yang修改
+        labelRDD.persist(StorageLevel.MEMORY_AND_DISK)
+        //---------------------
+
         val t4 = System.currentTimeMillis
         println("4.dataframe 转成rdd打标签耗时(millis):" + (t4 - t3))
 
@@ -74,6 +85,10 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
 
         makeEvents(enhancedDF, conf.get("uniqKeys"))
         println("6.所有业务营销 耗时(millis):" + (System.currentTimeMillis - t5))
+
+        //---------yang 修改--------
+        labelRDD.unpersist()
+        //-----------------
       }
     })
   }
