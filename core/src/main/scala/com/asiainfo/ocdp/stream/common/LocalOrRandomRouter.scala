@@ -26,10 +26,3 @@ class LocalOrRandomRouter(cacheManager: String) extends LocalRouter(cacheManager
 		codisHost
 	}
 }
-
-object mains extends  App{
-	private val router: LocalOrRandomRouter = new LocalOrRandomRouter("s1:6379,s2:6379,s3:6379,s4:6379,s5:6379")
-	for (a <- 1 to 1000) {
-		println(router.proxyHost("s9"))
-	}
-}
