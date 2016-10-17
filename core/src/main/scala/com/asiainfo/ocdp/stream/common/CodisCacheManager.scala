@@ -26,23 +26,6 @@ class CodisCacheManager extends RedisCacheManager {
 
     val hp: Tuple2[String, String] = {
       val proxylist = MainFrameConf.systemProps.get("cacheServers").split(",")
-      // deleted by surq at 2015.11.16 start
-//      println("cacheServers = " + MainFrameConf.systemProps.get("cacheServers"))
-//      val localip = InetAddress.getLocalHost.getHostAddress
-//      val proxymap = proxylist.map(args => (args.split(":")(0), args.split(":")(1))).toMap
-//      var rhost: String = null
-//      var rip: String = null
-//
-//      proxymap.get(localip) match {
-//        case Some(value) => rhost = localip
-//          rip = value
-//        case None =>
-//          val proxyid = localip.split("\\.")(3).toInt % proxymap.size
-//          rhost = proxylist(proxyid).split(":")(0)
-//          rip = proxylist(proxyid).split(":")(1)
-//      }
-      // deleted by surq at 2015.11.16 end     
-      // added by surq at 2015.11.16 start
 	    //TODO 随机选择代理是否会有瓶颈？是否可以设置均匀的选择代理
        val proxyid  = new java.util.Random().nextInt(proxylist.size)
        val proxyInfo =proxylist(proxyid).split(":")
