@@ -16,7 +16,7 @@ import java.util
 abstract class Router {
 
 	var cacheManager: String=""
-	val hostMap= new util.HashMap[String, String]
+	val hostMap= new util.HashMap[String,String]
 
 	def this(cacheManager: String) {
 		this()
