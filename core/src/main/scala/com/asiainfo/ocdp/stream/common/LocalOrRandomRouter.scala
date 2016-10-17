@@ -15,10 +15,9 @@ import java.util.Random
   */
 class LocalOrRandomRouter(cacheManager: String) extends LocalRouter(cacheManager) {
 
-
 	override def proxyHost(host: String): String = {
 		var codisHost: String = super.proxyHost(host)
-		if (codisHost == null) {
+		if (codisHost == null || "".equals(codisHost)) {
 			val split: Array[String] = cacheManager.split(",")
 			val i: Int = new Random().nextInt(split.length)
 			codisHost = split(i)

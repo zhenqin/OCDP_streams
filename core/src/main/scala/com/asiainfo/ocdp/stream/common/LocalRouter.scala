@@ -20,12 +20,15 @@ class LocalRouter extends Router {
 		this.cacheManager = cacheManager
 		val cacheManagers: Array[String] = this.cacheManager.split(",")
 		for (manager <- cacheManagers) {
-			val split: Array[String] = manager.split(":")
-			this.hostMap.put(split(0), manager)
+			//val split: Array[String] = manager.split(":")
+			//this.hostMap.put(split(0), manager)
+			this.hostMap.put(manager, manager)
 		}
 	}
 
 	def proxyHost(host: String): String = {
-		this.hostMap.get(host)
+		this.hostMap.filterKeys(f => {
+			f.startsWith(host.trim+":")
+		}).keySet.mkString(",")
 	}
 }

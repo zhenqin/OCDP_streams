@@ -1,6 +1,7 @@
 package com.asiainfo.ocdp.stream.common
 
 import java.net.InetAddress
+import java.util.Random
 
 import com.asiainfo.ocdp.stream.config.MainFrameConf
 import redis.clients.jedis.{JedisPool, JedisPoolConfig}
@@ -36,13 +37,17 @@ class SmartCodisCacheManager extends RedisCacheManager {
 	    //val proxylist = "Nowledgedata1:6379,Nowledgedata1:6372,Nowledgedata2:6373"
 
 	    val localOrRandomRouter: LocalOrRandomRouter = new LocalOrRandomRouter(proxylist)
-        val hostAndPort  = if(localOrRandomRouter.proxyHost(hostName)== null || "".equals(localOrRandomRouter.proxyHost(hostName))){
-	        localOrRandomRouter.proxyHost(hostName)
-        }else{
-	        localOrRandomRouter.proxyHost(hostIp)
-        }
+        val hostAndPort  = localOrRandomRouter.proxyHost(hostName)
 
-	    val splitInfo: Array[String] = hostAndPort.split(":")
+	    var proxyHostAndPort = ""
+
+	    if (hostAndPort != null && !"".equals(hostAndPort)) {
+		    val split: Array[String] = hostAndPort.split(",")
+		    val i: Int = new Random().nextInt(split.length)
+		    proxyHostAndPort = split(i)
+	    }
+
+	    val splitInfo: Array[String] = proxyHostAndPort.split(":")
 	    val hostIpInfo: String = splitInfo(0)
 	    val hostPortInfo: String = splitInfo(1)
 
