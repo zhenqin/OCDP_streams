@@ -18,15 +18,19 @@ class LocalOrBanlanceRouter  extends BanlanceRouter{
 		this.cacheManager=cacheManager
 		val cacheManagers: Array[String] = this.cacheManager.split(",")
 		for (manager <- cacheManagers) {
-			val split: Array[String] = manager.split(":")
-			this.hostMap.put(split(0), manager)
+			//val split: Array[String] = manager.split(":")
+			//this.hostMap.put(split(0), manager)
+			this.hostMap.put(manager, manager)
 			this.list.add(new HostAndCouter(manager))
 		}
 	}
 
 	override def proxyHost(host: String): String = {
-		var codisHost: String = this.hostMap.get(host)
-		if (codisHost == null) {
+		var codisHost: String = this.hostMap.filterKeys(f => {
+			f.startsWith(host.trim+":")
+		}).keySet.mkString(",")
+
+		if (codisHost == null || "".equals(codisHost)) {
 			codisHost = super.proxyHost(host)
 		}
 		codisHost
