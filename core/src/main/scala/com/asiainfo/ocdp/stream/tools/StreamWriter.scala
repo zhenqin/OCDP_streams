@@ -92,6 +92,7 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
 
     //todo liuhuan 改 2016-10-17
     def reduceByKeyFun = (jsonLabelStr1:String, jsonLabelStr2:String) => {
+
       if(jsonLabelStr1 > jsonLabelStr2) jsonLabelStr1
       else jsonLabelStr2
     }

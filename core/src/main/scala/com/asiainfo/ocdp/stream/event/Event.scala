@@ -35,17 +35,6 @@ class Event extends Serializable {
     // 根据业务条件过滤，并查询出输出字段
     val eventDF = df.filter(conf.filte_expr).selectExpr(mix_sel_expr: _*)
 
-    //-----------------------ly20161013修改------------------------------
-    eventDF.registerTempTable("LIUYU_TEST_TABLE")
-    val sqlString= new StringBuilder()
-    val splitFields: Array[String] = mix_sel_expr.toString.split(",")
-    //【sql语句好像不对】
-    sqlString.append("select ")
-    mix_sel_expr.filter(fields=>if("phone_no".equals(fields)) true else false).map(a=>sqlString.append(a+","))
-    sqlString.append("distinct('phone_no') ").append("from LIUYU_TEST_TABLE")
-    val sql: DataFrame = eventDF.sqlContext.sql(sqlString.toString())
-    //-----------------------------------------------------
-
     // 事件复用的时候会用到，注意做eventDF.persist
     if (EventConstant.NEEDCACHE == conf.getInt("needcache", 0)) cacheEvent(eventDF, uniqKeys)
 
@@ -110,7 +99,7 @@ class Event extends Serializable {
       for (index <- 0 until size) {
         if (index % batchLimit == 0) {
           // 把list放入线程池更新codis
-          if (index != 0) batchList += batchArrayBuffer.toArray
+          if (index != 0){ batchList += batchArrayBuffer.toArray }
           batchArrayBuffer = new ArrayBuffer[(String, String)]()
         }
         // 解析json数据，拼凑eventKey
@@ -124,6 +113,9 @@ class Event extends Serializable {
         if (index == size - 1) batchList += batchArrayBuffer.toArray
       }
 
+      //todo liuhuan 修改：batchList 是最后要输出匹配的 hgetall 的 key   示例：eventCache:460020033977918
+      //todo liuhuan 修改：time_EventId 为输出时 hgetall 的 第一个字段 Time:eventId:81934e5455506507015610543c2b0002
+      //todo liuhuan 修改：interval 为 2592000 秒
       val outPutList = eventServer.getEventCache(eventCacheService, batchList.toArray, time_EventId, conf.getInterval)
 
       val outPutJsonList = scala.collection.mutable.Map[String,String]()

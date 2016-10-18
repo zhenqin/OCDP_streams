@@ -18,13 +18,7 @@ object StreamTaskFactory {
     val interval = taskConf.getReceive_interval
     val taskType = taskConf.getTask_type
     if (TaskConstant.TYPE_DATAINTERFACE == taskType) {
-
-      val dataInterfaceService = new DataInterfaceServer
-
-      val conf: DataInterfaceConf = dataInterfaceService.getDataInterfaceInfoById(tid)
-      val labels: Array[Label] = dataInterfaceService.getLabelsByIFId(tid)
-      val events: Array[Event] = dataInterfaceService.getEventsByIFId(tid)
-      new DataInterfaceTask(tid, interval, conf, labels, events)
+      new DataInterfaceTask(tid, interval)
     }
     else if (TaskConstant.TYPE_SUTJECT == taskType)
       new SubjectTask(tid, interval)

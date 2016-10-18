@@ -51,9 +51,15 @@ class EventServer extends Logging with Serializable {
     CacheQryThreadPool.threadPool.execute(new InsertEventRows(keyEventIdData))
 
   /**
-   * 批量读取指定keys的事件缓存
-   * batchList[Array:(eventCache:eventKeyValue,jsonValue)]
-   */
+    * * 批量读取指定keys的事件缓存
+    * batchList[Array:(eventCache:eventKeyValue,jsonValue)]
+    *
+    * @param eventCacheService    线程池
+    * @param batchList             需要放入 codis 的 keyList
+    * @param eventId               事件类型ID
+    * @param interval              营销周期
+    * @return
+    */
   def getEventCache(eventCacheService:ExecutorCompletionService[immutable.Map[String, (String, Array[Byte])]],
       batchList: Array[Array[(String, String)]], eventId: String, interval: Int): List[String] = {
     import scala.collection.JavaConversions
