@@ -140,7 +140,8 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
       // cachemap_old
       val f1 = System.currentTimeMillis()
       var cachemap_old: Map[String, Any] = null
-      val keyList = busnessKeyList.map(line => line._1).toList
+      //add liuyu,zhenqin, toSet toList 去重复一次
+      val keyList = busnessKeyList.map(line => line._1).toSet.toList
       val batchSize = keyList.size
       println("本批次记录条数：" + batchSize)
       try {
