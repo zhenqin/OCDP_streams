@@ -35,17 +35,6 @@ class Event extends Serializable {
     // 根据业务条件过滤，并查询出输出字段
     val eventDF = df.filter(conf.filte_expr).selectExpr(mix_sel_expr: _*)
 
-    //-----------------------ly20161013修改------------------------------
-    eventDF.registerTempTable("LIUYU_TEST_TABLE")
-    val sqlString= new StringBuilder()
-    val splitFields: Array[String] = mix_sel_expr.toString.split(",")
-    //【sql语句好像不对】
-    sqlString.append("select ")
-    mix_sel_expr.filter(fields=>if("phone_no".equals(fields)) true else false).map(a=>sqlString.append(a+","))
-    sqlString.append("distinct('phone_no') ").append("from LIUYU_TEST_TABLE")
-    val sql: DataFrame = eventDF.sqlContext.sql(sqlString.toString())
-    //-----------------------------------------------------
-
     // 事件复用的时候会用到，注意做eventDF.persist
     if (EventConstant.NEEDCACHE == conf.getInt("needcache", 0)) cacheEvent(eventDF, uniqKeys)
 
