@@ -8,6 +8,7 @@ import com.asiainfo.ocdp.stream.config.DataInterfaceConf
 import com.asiainfo.ocdp.stream.event.Event
 import com.asiainfo.ocdp.stream.label.Label
 import com.asiainfo.ocdp.stream.manager.StreamTask
+import com.asiainfo.ocdp.stream.service.DataInterfaceServer
 import com.asiainfo.ocdp.stream.tools.{CacheFactory, CacheQryThreadPool, Json4sUtils}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
@@ -22,7 +23,12 @@ import scala.collection.{immutable, mutable}
 /**
  * Created by surq on 12/09/15
  */
-class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labels: Array[Label], events: Array[Event]) extends StreamTask {
+class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
+  val dataInterfaceService = new DataInterfaceServer
+
+  val conf: DataInterfaceConf = dataInterfaceService.getDataInterfaceInfoById(id)
+  val labels: Array[Label] = dataInterfaceService.getLabelsByIFId(id)
+  val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
 
   conf.setInterval(interval)
   // 原始信令字段个数
