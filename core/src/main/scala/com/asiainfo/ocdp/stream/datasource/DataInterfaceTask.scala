@@ -1,29 +1,34 @@
 package com.asiainfo.ocdp.stream.datasource
 
-import java.text.SimpleDateFormat
-import java.util.concurrent.ExecutorCompletionService
 
 import com.asiainfo.ocdp.stream.common.StreamingCache
-import com.asiainfo.ocdp.stream.config.DataInterfaceConf
 import com.asiainfo.ocdp.stream.event.Event
-import com.asiainfo.ocdp.stream.label.Label
 import com.asiainfo.ocdp.stream.manager.StreamTask
-import com.asiainfo.ocdp.stream.tools.{CacheFactory, CacheQryThreadPool, Json4sUtils}
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, Row, SQLContext}
+import com.asiainfo.ocdp.stream.service.DataInterfaceServer
+import com.asiainfo.ocdp.stream.tools.{ CacheFactory, Json4sUtils }
+import org.apache.spark.sql.types.{StructField, StructType}
+import org.apache.spark.sql.{ DataFrame, Row, SQLContext }
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.dstream.DStream
 
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.{immutable, mutable}
+import scala.collection.{ mutable, immutable }
+import org.apache.spark.rdd.RDD
+import java.text.SimpleDateFormat
+import java.util.concurrent.ExecutorCompletionService
+import com.asiainfo.ocdp.stream.tools.CacheQryThreadPool
+import java.util.concurrent.Callable
 
 /**
  * Created by surq on 12/09/15
  */
-class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labels: Array[Label], events: Array[Event]) extends StreamTask {
+class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
+  val dataInterfaceService = new DataInterfaceServer
 
+  val conf = dataInterfaceService.getDataInterfaceInfoById(id)
+  val labels = dataInterfaceService.getLabelsByIFId(id)
+  val events: Array[Event] = dataInterfaceService.getEventsByIFId(id)
   conf.setInterval(interval)
   // 原始信令字段个数
   val baseItemSize = conf.getBaseItemsSize
@@ -84,6 +89,7 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
         println("5.RDD 转换成 DataFrame 耗时(millis):" + (t5 - t4))
 
         makeEvents(enhancedDF, conf.get("uniqKeys"))
+	      println("event uniqKeys:"+conf.get("uniqKeys"))
         println("6.所有业务营销 耗时(millis):" + (System.currentTimeMillis - t5))
 
         //---------yang 修改--------
@@ -114,7 +120,7 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
   }
 
   /**
-   * 字段增强：根据uk从codis中取出相关关联数据，进行打标签操作
+   * 字段增强：根据uk（各个数据接口定义的业务主键uniqKeys,eg:imsi）从codis中取出相关关联数据，进行打标签操作
    */
   def execLabels(df: DataFrame): RDD[String] = {
     df.toJSON.mapPartitions(iter => {
@@ -126,14 +132,14 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
       // 装载整个批次打标签操作时，所需要的跟codis数据库交互的key
       val labelQryKeysSet = mutable.Set[String]()
       val cachemap_new = mutable.Map[String, Any]()
-      val ukUnion = conf.get("uniqKeys").split(":")
+      val ukUnion = conf.get("uniqKeys").split(":")//eg:imsi
       iter.toList.map(jsonStr => {
         val currentLine = Json4sUtils.jsonStr2Map(jsonStr)
-        val uk = ukUnion.map(currentLine(_)).mkString(",")
+        val uk = ukUnion.map(currentLine(_)).mkString(",")//uk:从jsonstr中获取到uniqKeys（eg:imsi）的取值，uk=用户imsi号码
         busnessKeyList += ("Label:" + uk -> currentLine)
         // 取出本条数据在打所有标签时所用的查询cache用到的key放入labelQryKeysSet
         labels.foreach(label => {
-          val qryKeys = label.getQryKeys(currentLine)
+          val qryKeys = label.getQryKeys(currentLine)//每种标签分别获取codis的查询key
           if (qryKeys != null && qryKeys.nonEmpty) labelQryKeysSet ++= qryKeys
         })
       })
@@ -146,6 +152,7 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
       println("本批次记录条数：" + batchSize)
       try {
         cachemap_old = CacheFactory.getManager.getMultiCacheByKeys(keyList, qryCacheService).toMap
+	 println("cache map size:" + cachemap_old.size)
       } catch {
         case ex: Exception =>
           logError("= = " * 15 + " got exception in EventSource while get cache")
@@ -202,9 +209,16 @@ class DataInterfaceTask(id: String, interval: Int, conf: DataInterfaceConf, labe
    * 业务处理
    */
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
-    println(" Begin exec evets : " + System.currentTimeMillis())
-    df.persist
-    events.map(event => event.buildEvent(df, uniqKeys))
+    println(" Begin persist dataFrame : " + System.currentTimeMillis())
+    df.persist(StorageLevel.MEMORY_AND_DISK)
+    println(" persist end : " + System.currentTimeMillis())
+    events.map(event =>{
+      println(" Begin exec evets : " + System.currentTimeMillis())
+      event.buildEvent(df, uniqKeys)
+      println(" end exec evets : " + System.currentTimeMillis())
+    })
+    println(" all evnt exec end : " + System.currentTimeMillis())
     df.unpersist
+    println(" dataFrame unpersist end : " + System.currentTimeMillis())
   }
 }

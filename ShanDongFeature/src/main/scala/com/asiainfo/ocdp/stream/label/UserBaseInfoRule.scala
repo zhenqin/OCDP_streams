@@ -17,7 +17,7 @@ class UserBaseInfoRule extends Label {
     val normal_imsi = line("imsi")
 
     val info_cols = conf.get("user_info_cols").split(",")
-    val qryKeys = getQryKeys(line)
+    val qryKeys = getQryKeys(line)//得到codis中存储的主叫或被叫的imsi标签key:eg["userInfo:主叫imsixxxxx","userInfo:被叫imsixxxxx"]
 
     var fieldMap = fieldsMap()
 
@@ -26,7 +26,7 @@ class UserBaseInfoRule extends Label {
     } else if (qryKeys.size == 1) {
       //其中一个imsi无效
       val qryKey = qryKeys.head
-      val userKey = qryKey.split(":")(1)
+      val userKey = qryKey.split(":")(1)//用户的imsi号
       val user_info_map = labelQryData.get(qryKey).get
 
       if (userKey == normal_imsi) {

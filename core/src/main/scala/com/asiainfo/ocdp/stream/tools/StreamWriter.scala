@@ -21,53 +21,6 @@ trait StreamWriter extends Serializable {
  */
 class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
 
-  //  def push(df: DataFrame, conf: EventConf, uniqKeys: String) {
-  //    val jsonRDD = df.toJSON
-  //    val topic = diConf.get("topic")
-  //    var fildList = conf.select_expr.split(",")
-  //    // add by surq at 2015.11.21 start 
-  //    if (conf.get("ext_fields", null) != null && conf.get("ext_fields") != "") {
-  //      val fields = conf.get("ext_fields").split(",").map(ext => (ext.split("as"))(1).trim)
-  //      fildList = fildList ++ fields
-  //    }
-  //    // add by surq at 2015.11.21 end   
-  //
-  //    val delim = conf.delim
-  //    val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys)
-  //    // modify by surq at 2015.11.03 start
-  //    //    resultRDD.mapPartitions(iter => {
-  //    //      if (iter.hasNext) {
-  //    //        val line = iter.next()
-  //    //        val key = line._1
-  //    //        val msg = line._2
-  //    //        val messages = ArrayBuffer[KeyedMessage[String, String]]()
-  //    //        if (key == null) {
-  //    //          messages.append(new KeyedMessage[String, String](topic, msg))
-  //    //        } else {
-  //    //          messages.append(new KeyedMessage[String, String](topic, key, msg))
-  //    //        }
-  //    //        KafkaSendTool.sendMessage(diConf.dsConf, messages.toList)
-  //    //      }
-  //    //      iter
-  //    //    }).count()
-  //    val cont = resultRDD.mapPartitions(iter => {
-  //      iter.toList.map(line =>
-  //        {
-  //          val key = line._1
-  //          val msg_json = line._2
-  //          val msg = Json4sUtils.jsonStr2String(msg_json, fildList, delim)
-  //          val messages = ArrayBuffer[KeyedMessage[String, String]]()
-  //          if (key == null) {
-  //            messages.append(new KeyedMessage[String, String](topic, msg))
-  //          } else {
-  //            messages.append(new KeyedMessage[String, String](topic, key, msg))
-  //          }
-  //          KafkaSendTool.sendMessage(diConf.dsConf, messages.toList)
-  //          key
-  //        }).toIterator
-  //    }).count()
-  //    // modify by surq at 2015.11.03 end
-  //  }
 
   def push(rdd: RDD[String], conf: EventConf, uniqKeys: String)= setMessage(rdd, conf, uniqKeys).count
   def push(df: DataFrame, conf: EventConf, uniqKeys: String) = setMessage(df.toJSON, conf, uniqKeys).count
