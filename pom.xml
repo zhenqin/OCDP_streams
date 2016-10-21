@@ -10,7 +10,6 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>common</module>
         <module>core</module>
         <module>ShanDongFeature</module>
     </modules>
@@ -18,7 +17,7 @@
     <properties>
         <scala.version>2.10.4</scala.version>
         <scala.binary.version>2.10</scala.binary.version>
-        <spark.version>1.4.1</spark.version>
+        <spark.version>1.4.0</spark.version>
     </properties>
 
 

@@ -140,6 +140,7 @@ class InsertEventRows(value: Array[(String, String, String)]) extends Runnable {
       val pgl = conn.pipelined()
       value.foreach(elem => pgl.hset(elem._1.getBytes, elem._2.getBytes, elem._3.getBytes))
       pgl.syncAndReturnAll()
+      logger.info("codis hset dataset length: {} cost time {} ms", value.length, (System.currentTimeMillis() - t1))
     } catch {
       case ex: Exception =>
         logger.error("= = " * 15 + "found error in InsertEventRows.call()")

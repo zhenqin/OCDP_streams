@@ -38,6 +38,8 @@ class Event extends Serializable {
     // 事件复用的时候会用到，注意做eventDF.persist
     if (EventConstant.NEEDCACHE == conf.getInt("needcache", 0)) cacheEvent(eventDF, uniqKeys)
 
+    println("event: " + conf.getId + "/" + conf.getName + " interval: " + conf.interval)
+
     // 如果业务输出周期不为0，那么需要从codis中取出比兑营销时间，满足条件的输出
     val jsonRDD = if (EventConstant.RealtimeTransmission != conf.interval) checkEvent(eventDF, uniqKeys)
     else eventDF.toJSON
@@ -88,10 +90,14 @@ class Event extends Serializable {
   import com.asiainfo.ocdp.stream.tools.CacheQryThreadPool
   def checkEvent(eventDF: DataFrame, uniqKeys: String): (RDD[String]) = {
     val time_EventId = EventConstant.EVENTCACHE_FIELD_TIMEEVENTID_PREFIX_KEY + conf.id
+
+    println("timeEvent: " + time_EventId)
+
     eventDF.toJSON.mapPartitions(iter => {
       val eventCacheService = new ExecutorCompletionService[immutable.Map[String, (String, Array[Byte])]](CacheQryThreadPool.threadPool)
       val batchList = new ArrayBuffer[Array[(String, String)]]()
 
+      println("================eventDF.toJSON.mapPartitions=================== ")
       var batchArrayBuffer: ArrayBuffer[(String, String)] = null
       val jsonList = iter.toList
       val size = jsonList.size
@@ -99,7 +105,9 @@ class Event extends Serializable {
       for (index <- 0 until size) {
         if (index % batchLimit == 0) {
           // 把list放入线程池更新codis
-          if (index != 0){ batchList += batchArrayBuffer.toArray }
+          if (index != 0) {
+            batchList += batchArrayBuffer.toArray
+          }
           batchArrayBuffer = new ArrayBuffer[(String, String)]()
         }
         // 解析json数据，拼凑eventKey
@@ -110,7 +118,9 @@ class Event extends Serializable {
         batchArrayBuffer += ((EventConstant.EVENT_CACHE_PREFIX_NAME + eventKeyValue, line))
 
         // 把list放入线程池更新codis
-        if (index == size - 1) batchList += batchArrayBuffer.toArray
+        if (index == size - 1) {
+          batchList += batchArrayBuffer.toArray
+        }
       }
 
       //todo liuhuan 修改：batchList 是最后要输出匹配的 hgetall 的 key   示例：eventCache:460020033977918

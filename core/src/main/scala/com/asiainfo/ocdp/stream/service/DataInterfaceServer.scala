@@ -132,9 +132,6 @@ class DataInterfaceServer extends Logging with Serializable {
   }
   
   def getEventsByIFId(id: String): Array[Event] = {
-    /*val sql = "select id, name, select_expr, filter_expr, p_event_id, properties " +
-      "from " + TableInfoConstant.EventTableName +
-      " where diid = '" + id + "' and status = 1"*/
     val sql = "select id, name, select_expr, filter_expr, p_event_id, properties " +
       "from " + TableInfoConstant.EventTableName +
       " where diid = '" + id + "' and status = 1"
@@ -167,9 +164,14 @@ class DataInterfaceServer extends Logging with Serializable {
       outputIFIdsArrMap.foreach(kvMap => {
         val diid = kvMap.get("diid").get
         // 加载Interface内容
-        outputIFIdArr += (getDataInterfaceInfoById(diid))
+        //TODO add zhenqin， 这里给 setInterval 也赋值
+        val dataInterface = getDataInterfaceInfoById(diid)
+
         send_interval = kvMap.get("interval").get.toInt
         delim = kvMap.get("delim").get
+
+        dataInterface.setInterval(send_interval)
+        outputIFIdArr += (dataInterface)
       })
       conf.setOutIFIds(outputIFIdArr.toArray)
       conf.setInterval(send_interval)

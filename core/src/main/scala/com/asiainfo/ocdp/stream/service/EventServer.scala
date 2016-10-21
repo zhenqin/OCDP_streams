@@ -1,5 +1,7 @@
 package com.asiainfo.ocdp.stream.service
 
+import java.util.concurrent.atomic.AtomicInteger
+
 import com.asiainfo.ocdp.stream.common.Logging
 import com.asiainfo.ocdp.stream.tools.{ CacheQryThreadPool, InsertEventRows, QryEventCache }
 import scala.collection.mutable.Map
@@ -35,6 +37,8 @@ class EventServer extends Logging with Serializable {
     val outPutJsonMap = Map[String, String]()
     batchList.foreach(batch => eventCacheService.submit(new QryEventCache(batch, eventId)))
 
+    logInfo("batchList size " + batchList.size + " event: " + eventId + " interval: " + interval)
+    var printCount = new AtomicInteger(0)
     // 遍历各batch线程的结果返回值
     for (index <- 0 until batchList.size) {
       // 把查询的结果集放入multimap
@@ -55,7 +59,11 @@ class EventServer extends Logging with Serializable {
           val current_time = System.currentTimeMillis
           // 满足营销
           //modify zhenqin，刘欢。 原1000改变为1000L，Int 值过大溢出，换为 Long 类型
-          if (current_time >= (cache_time.toLong + interval * 1000L)) {
+          //if (java.lang.Boolean.parseBoolean("false")) {
+          if(current_time >= (cache_time.toLong + interval * 1000L) && !outPutJsonMap.contains(key)) {
+            logInfo(key + " 上次营销: " + cache_time.toLong)
+            printCount.incrementAndGet()
+
             // 放入更新codis list等待更新
             updateArrayBuffer.append((key, eventId, String.valueOf(current_time)))
             // 放入输入map等待输出
@@ -63,9 +71,12 @@ class EventServer extends Logging with Serializable {
           }
         })
         // 一个batch的数据完成后，更新codis营销时间
-        if (updateArrayBuffer.size > 0) cacheEventData(updateArrayBuffer.toArray)
+        if (updateArrayBuffer.nonEmpty) {
+          cacheEventData(updateArrayBuffer.toArray)
+        }
       }
     }
+    logInfo("本批次： " + batchList.size + " 营销数据: " + printCount.get())
     // 返回所有batchLimt的满足营销时间的数据json
     outPutJsonMap.toList.map(_._2)
   }
