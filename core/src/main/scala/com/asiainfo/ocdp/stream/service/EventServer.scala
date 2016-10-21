@@ -37,8 +37,7 @@ class EventServer extends Logging with Serializable {
     val outPutJsonMap = Map[String, String]()
     batchList.foreach(batch => eventCacheService.submit(new QryEventCache(batch, eventId)))
 
-    logInfo("batchList size " + batchList.size + " event: " + eventId + " interval: " + interval)
-    var printCount = new AtomicInteger(0)
+    val printCount = new AtomicInteger(0)
     // 遍历各batch线程的结果返回值
     for (index <- 0 until batchList.size) {
       // 把查询的结果集放入multimap
@@ -53,9 +52,10 @@ class EventServer extends Logging with Serializable {
           // json 字段
           val json = jsonCache._1
           // codis 中存储的上次营销时间的二进制
-          val cache = jsonCache._2
           // 往次营销时间
-          val cache_time = if (cache != null) new String(cache) else "0"
+          val cache_time = if(jsonCache._2 != null) new String(jsonCache._2) else "0"
+          //logInfo("codis-result key: " + key + " value: " + json + " cache_time: " + cache_time)
+
           val current_time = System.currentTimeMillis
           // 满足营销
           //modify zhenqin，刘欢。 原1000改变为1000L，Int 值过大溢出，换为 Long 类型
@@ -76,7 +76,7 @@ class EventServer extends Logging with Serializable {
         }
       }
     }
-    logInfo("本批次： " + batchList.size + " 营销数据: " + printCount.get())
+    logInfo("batch success： " + batchList.size + " print data size: " + printCount.get())
     // 返回所有batchLimt的满足营销时间的数据json
     outPutJsonMap.toList.map(_._2)
   }
