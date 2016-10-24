@@ -2,6 +2,9 @@ package com.asiainfo.ocdp.stream.common
 
 import java.util
 
+import com.asiainfo.ocdp.stream.config.MainFrameConf
+import redis.clients.jedis.JedisPool
+
 /**
   *
   *
@@ -13,22 +16,41 @@ import java.util
   *
   * @author liuyu
   */
-class LocalRouter extends Router {
+class LocalRouter extends Router{
 
 	def this(cacheManager: String) {
 		this()
 		this.cacheManager = cacheManager
 		val cacheManagers: Array[String] = this.cacheManager.split(",")
 		for (manager <- cacheManagers) {
-			//val split: Array[String] = manager.split(":")
-			//this.hostMap.put(split(0), manager)
 			this.hostMap.put(manager, manager)
 		}
 	}
 
-	def proxyHost(host: String): String = {
-		this.hostMap.filterKeys(f => {
+	def proxyHost(host: String): util.LinkedList[JedisPool] = {
+
+		val pool = new util.LinkedList[JedisPool]()
+		val proxy = this.hostMap.filterKeys(f => {
 			f.startsWith(host.trim+":")
-		}).keySet.mkString(",")
+		}).keySet
+		proxy.toList.foreach(element => {
+			var enabled = true  //链接是否可用的标志
+			val hostAndPort:Array[String] = element.split(":")
+			val jedisPool = new JedisPool(this.JedisConfig, hostAndPort(0), hostAndPort(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+
+			//val jedisPool =new JedisPool(JedisConfig,hostAndPort(0), hostAndPort(1).toInt, 3000)
+			//通过是否抛异常判断连接是否可用
+			try{
+				jedisPool.getResource
+			}catch {
+				case _ =>{
+					enabled = false
+					log.error("连接不可用。。。")
+				}
+			}
+			if(enabled) pool.add(jedisPool)
+		})
+
+		pool
 	}
 }

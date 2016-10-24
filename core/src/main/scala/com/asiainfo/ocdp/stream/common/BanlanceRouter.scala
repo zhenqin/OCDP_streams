@@ -1,8 +1,11 @@
 package com.asiainfo.ocdp.stream.common
 
 import java.util
-import java.util.{Collections, Comparator}
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.{Collections, Comparator}
+
+import com.asiainfo.ocdp.stream.config.MainFrameConf
+import redis.clients.jedis.JedisPool
 
 
 /**
@@ -28,22 +31,48 @@ class BanlanceRouter extends Router{
 		}
 	}
 
-	override def proxyHost(host: String): String = {
+	override def proxyHost(host: String): util.LinkedList[JedisPool] = {
 		Collections.sort(this.list, new Comparator[HostAndCouter]() {
 			def compare(o1: HostAndCouter, o2: HostAndCouter): Int = {
 				 o1.get - o2.get
 			}
 		})
-		val first: HostAndCouter = this.list.getFirst
-		first.incrementAndGet
-		first.host
+
+		var enabled = true
+		var flag: Boolean = false
+		var index: Int = 0
+		val codisHost= new util.LinkedList[JedisPool]()
+
+		while(!flag){
+			val first: HostAndCouter = this.list.get(index)
+			val split1:Array[String] = first.host.split(":")
+			val jedisPool = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+
+			try{
+				jedisPool.getResource
+			}catch {
+				case _ =>{
+					enabled = false
+					log.error("连接不可用。。。")
+				}
+			}
+
+			if(enabled) {
+				codisHost.add(jedisPool)
+				first.incrementAndGet
+				index = index+1
+				flag = true
+			}
+		}
+
+		codisHost
 	}
 }
 
 
- class HostAndCouter {
-	 var host: String = null
-	 var counter: AtomicInteger = new AtomicInteger(0)
+class HostAndCouter {
+	var host: String = null
+	var counter: AtomicInteger = new AtomicInteger(0)
 
 	def this(host: String) {
 		this()
@@ -51,19 +80,19 @@ class BanlanceRouter extends Router{
 	}
 
 	def incrementAndGet: Int = {
-		 counter.incrementAndGet
+		counter.incrementAndGet
 	}
 
 	def decrementAndGet: Int = {
-		 counter.decrementAndGet
+		counter.decrementAndGet
 	}
 
 	def intValue: Int = {
-		 counter.intValue
+		counter.intValue
 	}
 
 	def get: Int = {
-		 counter.get
+		counter.get
 	}
 
 	def setHost(host: String) {
@@ -85,12 +114,5 @@ class BanlanceRouter extends Router{
 
 	override def hashCode: Int = {
 		host.hashCode
-	}
-}
-
-object main extends  App{
-	private val router: BanlanceRouter = new BanlanceRouter("s1:6379,s2:6379,s3:6379,s4:6379,s5:6379")
-	for (a <- 1 to 1000) {
-		println(router.proxyHost("s9"))
 	}
 }
