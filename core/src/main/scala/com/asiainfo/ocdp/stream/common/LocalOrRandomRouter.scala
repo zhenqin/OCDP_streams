@@ -6,6 +6,7 @@ import java.util.Random
 import com.asiainfo.ocdp.stream.config.MainFrameConf
 import redis.clients.jedis.JedisPool
 
+
 /**
   *
   *
@@ -19,23 +20,33 @@ import redis.clients.jedis.JedisPool
   */
 class LocalOrRandomRouter(cacheManager: String) extends LocalRouter(cacheManager) {
 
-	override def proxyHost(host: String): util.LinkedList[JedisPool] = {
-		var codisHost= super.proxyHost(host)
-
-		var enabled = true
+	override def proxyHost(host: String): JedisPool = {
+		var jedisPool: JedisPool = null
+		jedisPool = super.proxyHost(host)
+		var enabled = true     //
 		var flag: Boolean = false
-		if (codisHost!=null && codisHost.size()==0) {
-			val split: Array[String] = cacheManager.split(",")
-			while(!flag){
-				val i: Int = new Random().nextInt(split.length)
-				val hostAndPort: String = split(i)
-				val split1:Array[String] = hostAndPort.split(":")
-				val jedisPool = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
 
-				//val jedisPool =new JedisPool(JedisConfig,split1(0), split1(1).toInt, 3000)
+		if (jedisPool == null) {
+
+			val linkedList = new util.ArrayList[String]()
+			val toList: List[String] = this.hostMap.keySet.toList
+
+			for(li <- toList){
+				linkedList.addAll(this.hostMap.get(li).get)
+			}
+
+			while(!flag){
+				//随机从多个代理中挑选代理
+				val i: Int = new Random().nextInt(linkedList.size())
+				val host: String = linkedList.get(i)
+
+				val split1:Array[String] = host.split(":")
+				val jedis = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+
+				//val jedis =new JedisPool(JedisConfig,split1(0), split1(1).toInt, 3000)
 
 				try{
-					jedisPool.getResource
+					jedis.getResource
 				}catch {
 					case _ =>{
 						enabled = false
@@ -44,13 +55,12 @@ class LocalOrRandomRouter(cacheManager: String) extends LocalRouter(cacheManager
 				}
 
 				if(enabled) {
-					codisHost.add(jedisPool)
+					jedisPool = jedis
 					flag = true
 				}
 			}
 		}
-
-		codisHost
+		jedisPool
 	}
 }
 

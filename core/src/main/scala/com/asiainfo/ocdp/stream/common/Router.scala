@@ -6,6 +6,7 @@ import com.asiainfo.ocdp.stream.config.MainFrameConf
 import redis.clients.jedis.{JedisPool, JedisPoolConfig}
 
 
+
 /**
   *
   *
@@ -20,7 +21,7 @@ import redis.clients.jedis.{JedisPool, JedisPoolConfig}
 abstract class Router extends Logging{
 
 	var cacheManager: String=""   //连接代理
-	val hostMap= new scala.collection.mutable.HashMap[String,String]
+	val hostMap= new scala.collection.mutable.HashMap[String,util.LinkedList[String]]
 
 	val JedisConfig = new JedisPoolConfig()
 	JedisConfig.setMaxTotal(MainFrameConf.systemProps.getInt("jedisPoolMaxTotal"))
@@ -29,17 +30,10 @@ abstract class Router extends Logging{
 	JedisConfig.setMinEvictableIdleTimeMillis(MainFrameConf.systemProps.getInt("jedisPoolMEM"))
 	JedisConfig.setTestOnBorrow(true)
 
-	/*val JedisConfig = new JedisPoolConfig()
-	JedisConfig.setMaxTotal(3)
-	JedisConfig.setMaxIdle(10)
-	JedisConfig.setMinIdle(1)
-	JedisConfig.setMinEvictableIdleTimeMillis(1)
-	JedisConfig.setTestOnBorrow(true)*/
-
 	def this(cacheManager: String) {
 		this()
 		this.cacheManager=cacheManager
 	}
 
-	def proxyHost(host: String): util.LinkedList[JedisPool]
+	def proxyHost(host: String): JedisPool
 }

@@ -31,25 +31,25 @@ class BanlanceRouter extends Router{
 		}
 	}
 
-	override def proxyHost(host: String): util.LinkedList[JedisPool] = {
+	override def proxyHost(host: String): JedisPool = {
 		Collections.sort(this.list, new Comparator[HostAndCouter]() {
 			def compare(o1: HostAndCouter, o2: HostAndCouter): Int = {
 				 o1.get - o2.get
 			}
 		})
 
+		var jedisPool: JedisPool = null
 		var enabled = true
 		var flag: Boolean = false
 		var index: Int = 0
-		val codisHost= new util.LinkedList[JedisPool]()
 
 		while(!flag){
 			val first: HostAndCouter = this.list.get(index)
 			val split1:Array[String] = first.host.split(":")
-			val jedisPool = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+			val jedis = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
 
 			try{
-				jedisPool.getResource
+				jedis.getResource
 			}catch {
 				case _ =>{
 					enabled = false
@@ -58,14 +58,13 @@ class BanlanceRouter extends Router{
 			}
 
 			if(enabled) {
-				codisHost.add(jedisPool)
+				jedisPool = jedis
 				first.incrementAndGet
 				index = index+1
 				flag = true
 			}
 		}
-
-		codisHost
+		jedisPool
 	}
 }
 
