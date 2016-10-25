@@ -1,6 +1,10 @@
 package com.asiainfo.ocdp.stream.common
 
+import java.util
 import java.util.Random
+
+import com.asiainfo.ocdp.stream.config.MainFrameConf
+import redis.clients.jedis.JedisPool
 
 /**
   *
@@ -20,9 +24,20 @@ class RandomRouter extends Router {
 		this.cacheManager = cacheManager
 	}
 
-	def proxyHost(host: String): String = {
-		val split: Array[String] = this.cacheManager.split(",")
-		val i: Int = new Random().nextInt(split.length)
-		return split(i)
+	def proxyHost(host: String): util.LinkedList[JedisPool] = {
+		val split: Array[String] = cacheManager.split(",")
+		val flag: Boolean = false
+		val codisHost= new util.LinkedList[JedisPool]()
+		while(!flag){
+			val i: Int = new Random().nextInt(split.length)
+			val hostAndPort: String = split(i)
+			val split1:Array[String] = hostAndPort.split(":")
+			val jedisPool = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+			if(jedisPool != null) {
+				codisHost.add(jedisPool)
+				flag.==(true)
+			}
+		}
+		codisHost
 	}
 }
