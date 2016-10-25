@@ -1,9 +1,5 @@
 package com.asiainfo.ocdp.stream.common
 
-import java.util
-import java.util.Random
-
-import com.asiainfo.ocdp.stream.config.MainFrameConf
 import redis.clients.jedis.JedisPool
 
 
@@ -23,27 +19,30 @@ class LocalOrRandomRouter(cacheManager: String) extends LocalRouter(cacheManager
 	override def proxyHost(host: String): JedisPool = {
 		var jedisPool: JedisPool = null
 		jedisPool = super.proxyHost(host)
-		var enabled = true     //
-		var flag: Boolean = false
 
 		if (jedisPool == null) {
 
-			val linkedList = new util.ArrayList[String]()
+			jedisPool = new RandomRouter(cacheManager).proxyHost(host)
+
+			/*val linkedList = new util.ArrayList[String]()
 			val toList: List[String] = this.hostMap.keySet.toList
 
 			for(li <- toList){
 				linkedList.addAll(this.hostMap.get(li).get)
 			}
 
-			while(!flag){
+			var enabled = true
+			var flag: Boolean = false
+
+			while(linkedList.size()!= 0 && !flag){
 				//随机从多个代理中挑选代理
 				val i: Int = new Random().nextInt(linkedList.size())
 				val host: String = linkedList.get(i)
 
 				val split1:Array[String] = host.split(":")
-				val jedis = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+				//val jedis = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
 
-				//val jedis =new JedisPool(JedisConfig,split1(0), split1(1).toInt, 3000)
+				val jedis =new JedisPool(JedisConfig,split1(0), split1(1).toInt, 3000)
 
 				try{
 					jedis.getResource
@@ -58,7 +57,7 @@ class LocalOrRandomRouter(cacheManager: String) extends LocalRouter(cacheManager
 					jedisPool = jedis
 					flag = true
 				}
-			}
+			}*/
 		}
 		jedisPool
 	}

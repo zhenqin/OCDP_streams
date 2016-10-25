@@ -13,7 +13,7 @@ class SmartCodisCacheManager extends RedisCacheManager {
  private val jedisPool: JedisPool = {
 
 	 val inetAddress: InetAddress = GetHostIpOrHostName.getInetAddress()
-	 val hostIp: String = GetHostIpOrHostName.getHostIp(inetAddress)  //获取当前主机Ip
+	 //val hostIp: String = GetHostIpOrHostName.getHostIp(inetAddress)  //获取当前主机Ip
 	 val hostName: String = GetHostIpOrHostName.getHostName(inetAddress) //获取当前主机hostname
 
 	 val proxylist = MainFrameConf.systemProps.get("cacheServers")

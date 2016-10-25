@@ -2,7 +2,6 @@ package com.asiainfo.ocdp.stream.common
 
 import java.util
 
-import com.asiainfo.ocdp.stream.config.MainFrameConf
 import redis.clients.jedis.JedisPool
 
 
@@ -17,23 +16,7 @@ import redis.clients.jedis.JedisPool
   *
   * @author liuyu
   */
-class LocalRouter extends Router{
-
-	def this(cacheManager: String) {
-		this()
-		this.cacheManager = cacheManager
-		val cacheManagers: Array[String] = this.cacheManager.split(",")
-
-		for (manager <- cacheManagers) {
-			val split: Array[String] = manager.split(":")
-			val maybeList = new util.LinkedList[String]()
-			if(hostMap.contains(split(0))){
-				maybeList.addAll(hostMap.get(split(0)).get)
-			}
-			maybeList.add(manager)
-			hostMap.put(split(0),maybeList)
-		}
-	}
+class LocalRouter(cacheManager: String) extends Router(cacheManager){
 
 	def proxyHost(host: String): JedisPool = {
 
@@ -43,13 +26,16 @@ class LocalRouter extends Router{
 			val hostList : util.LinkedList[String] = this.hostMap.get(host).get
 
 			val iterator: util.Iterator[String] = hostList.iterator()
-			while (iterator.hasNext){
-				val element: String = iterator.next()
-				var enabled = true  //链接是否可用的标志
-				val hostAndPort:Array[String] = element.split(":")
-				val jedis= new JedisPool(this.JedisConfig, hostAndPort(0), hostAndPort(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+			var flag: Boolean = false
+			var enabled = true  //链接是否可用的标志
 
-				//val jedisPool =new JedisPool(JedisConfig,hostAndPort(0), hostAndPort(1).toInt, 3000)
+			while (iterator.hasNext && !flag){
+				val element: String = iterator.next()
+
+				val hostAndPort:Array[String] = element.split(":")
+				//val jedis= new JedisPool(this.JedisConfig, hostAndPort(0), hostAndPort(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+
+				val jedis =new JedisPool(JedisConfig,hostAndPort(0), hostAndPort(1).toInt, 3000)
 				//通过是否抛异常判断连接是否可用
 				try{
 					jedis.getResource
@@ -60,7 +46,10 @@ class LocalRouter extends Router{
 					}
 				}
 
-				if(enabled) jedisPool = jedis
+				if(enabled) {
+					jedisPool = jedis
+					flag = true
+				}
 			}
 		}
 

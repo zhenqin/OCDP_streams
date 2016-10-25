@@ -20,7 +20,7 @@ import redis.clients.jedis.JedisPool
   * @author liuyu
   */
 class BanlanceRouter extends Router{
-	var list = new util.LinkedList[HostAndCouter]
+	val list = new util.LinkedList[HostAndCouter]
 
 	def this(cacheManager: String){
 		this()

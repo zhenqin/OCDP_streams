@@ -3,10 +3,7 @@ package com.asiainfo.ocdp.stream.common
 import java.util
 import java.util.Random
 
-import com.asiainfo.ocdp.stream.config.MainFrameConf
 import redis.clients.jedis.JedisPool
-
-import scala.collection.mutable
 
 /**
   *
@@ -19,12 +16,7 @@ import scala.collection.mutable
   *
   * @author liuyu
   */
-class RandomRouter extends Router {
-
-	def this(cacheManager: String) {
-		this()
-		this.cacheManager = cacheManager
-	}
+class RandomRouter(cacheManager: String) extends Router(cacheManager) {
 
 	def proxyHost(host: String): JedisPool = {
 		var jedisPool: JedisPool = null
@@ -38,16 +30,16 @@ class RandomRouter extends Router {
 
 		var enabled = true
 		var flag: Boolean = false
-		while(!flag){
+		while(linkedList.size()!= 0 && !flag){
 
 			//然后从机器的多个代理中挑选代理
 			val i: Int = new Random().nextInt(linkedList.size())
 			val host: String = linkedList.get(i)
 
 			val split1:Array[String] = host.split(":")
-			val jedis = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
+			//val jedis = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
 
-			//val jedis =new JedisPool(JedisConfig,split1(0), split1(1).toInt, 3000)
+			val jedis =new JedisPool(JedisConfig,split1(0), split1(1).toInt, 3000)
 
 			try{
 				jedisPool.getResource
@@ -59,9 +51,8 @@ class RandomRouter extends Router {
 			}
 
 			if(enabled) {
-				flag = true
 				jedisPool = jedis
-
+				flag = true
 			}
 		}
 		jedisPool
