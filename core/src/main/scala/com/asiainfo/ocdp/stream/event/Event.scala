@@ -90,14 +90,10 @@ class Event extends Serializable {
   import com.asiainfo.ocdp.stream.tools.CacheQryThreadPool
   def checkEvent(eventDF: DataFrame, uniqKeys: String): (RDD[String]) = {
     val time_EventId = EventConstant.EVENTCACHE_FIELD_TIMEEVENTID_PREFIX_KEY + conf.id
-
-    println("timeEvent: " + time_EventId)
-
     eventDF.toJSON.mapPartitions(iter => {
       val eventCacheService = new ExecutorCompletionService[immutable.Map[String, (String, Array[Byte])]](CacheQryThreadPool.threadPool)
       val batchList = new ArrayBuffer[Array[(String, String)]]()
 
-      println("================eventDF.toJSON.mapPartitions=================== ")
       var batchArrayBuffer: ArrayBuffer[(String, String)] = null
       val jsonList = iter.toList
       val size = jsonList.size

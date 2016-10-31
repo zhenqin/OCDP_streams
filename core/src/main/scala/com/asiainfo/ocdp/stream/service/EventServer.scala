@@ -65,7 +65,7 @@ class EventServer extends Logging with Serializable {
             if (!outPutJsonMap.contains(key) || current_time >= batchPrintTime + intervalMillis) {
               //同批次内，上次营销时间超过时间间隔，需要营销；
               //该种情况属于小于批次时间内的营销情况
-              logInfo(key + " 上次营销: " + cache_time.toLong)
+              //logInfo(key + " 上次营销: " + cache_time.toLong)
               printCount.incrementAndGet()
 
               //若果营销了将新的时间加入保存

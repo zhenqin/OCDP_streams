@@ -1,6 +1,8 @@
 package com.asiainfo.ocdp.stream.datasource
 
 
+import java.util.Date
+
 import com.asiainfo.ocdp.stream.common.StreamingCache
 import com.asiainfo.ocdp.stream.event.Event
 import com.asiainfo.ocdp.stream.manager.StreamTask
@@ -209,16 +211,16 @@ class DataInterfaceTask(id: String, interval: Int) extends StreamTask {
    * 业务处理
    */
   final def makeEvents(df: DataFrame, uniqKeys: String) = {
-    println(" Begin persist dataFrame : " + System.currentTimeMillis())
+    println(" Begin persist dataFrame : " + new Date())
     df.persist(StorageLevel.MEMORY_AND_DISK)
-    println(" persist end : " + System.currentTimeMillis())
+    println(" persist end : " + new Date())
     events.map(event =>{
-      println(" Begin exec evets : " + System.currentTimeMillis())
+      println("exec event : " + event.conf.getId + "/" + event.conf.getName + " start at: " + new Date())
       event.buildEvent(df, uniqKeys)
-      println(" end exec evets : " + System.currentTimeMillis())
+      println("exec evets : " + event.conf.getId + "/" + event.conf.getName + "  stop at: " + new Date())
     })
-    println(" all evnt exec end : " + System.currentTimeMillis())
+    println(" all evnt exec end : " + new Date())
     df.unpersist
-    println(" dataFrame unpersist end : " + System.currentTimeMillis())
+    println(" dataFrame unpersist end : " + new Date())
   }
 }
