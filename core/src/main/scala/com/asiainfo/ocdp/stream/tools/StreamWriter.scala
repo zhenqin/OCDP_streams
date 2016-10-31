@@ -49,7 +49,7 @@ class StreamKafkaWriter(diConf: DataInterfaceConf) extends StreamWriter {
       if(jsonLabelStr1 > jsonLabelStr2) jsonLabelStr1
       else jsonLabelStr2
     }
-    val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys).reduceByKey(reduceByKeyFun)
+    val resultRDD: RDD[(String, String)] = transforEvent2KafkaMessage(jsonRDD, uniqKeys)//.reduceByKey(reduceByKeyFun)
 
     resultRDD.mapPartitions(iter => {
       val messages = ArrayBuffer[KeyedMessage[String, String]]()
