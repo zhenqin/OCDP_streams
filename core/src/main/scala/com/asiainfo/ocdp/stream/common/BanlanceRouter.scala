@@ -6,6 +6,7 @@ import java.util.{Collections, Comparator}
 
 import com.asiainfo.ocdp.stream.config.MainFrameConf
 import redis.clients.jedis.JedisPool
+import redis.clients.jedis.exceptions.JedisConnectionException
 
 
 /**
@@ -43,7 +44,7 @@ class BanlanceRouter extends Router{
 		var flag: Boolean = false
 		var index: Int = 0
 
-		while(!flag){
+		while(index < this.list.size() && !flag){
 			val first: HostAndCouter = this.list.get(index)
 			val split1:Array[String] = first.host.split(":")
 			val jedis = new JedisPool(this.JedisConfig, split1(0), split1(1).toInt, MainFrameConf.systemProps.getInt("jedisTimeOut"))
@@ -51,18 +52,19 @@ class BanlanceRouter extends Router{
 			try{
 				jedis.getResource
 			}catch {
-				case _ =>{
+				case ex:JedisConnectionException =>{
 					enabled = false
-					log.error("连接不可用。。。")
+					index = index+1
+					log.error("连接不可用。。。" + ex.getMessage)
 				}
 			}
 
 			if(enabled) {
+				println("本次所选的codis代理是=> hostName:【"+split1(0)+"】，port:【"+split1(1)+"】。。。")
 				jedisPool = jedis
 				first.incrementAndGet
-				index = index+1
 				flag = true
-			}
+			}else enabled = true
 		}
 		jedisPool
 	}
